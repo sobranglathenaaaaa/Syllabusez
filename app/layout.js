@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "School Syllabus Management System",
+  title: "School Syllabus Management Portal",
   description: "Role-based syllabus management for admins, instructors, and students.",
 };
 

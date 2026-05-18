@@ -1,14 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { query } from "@/lib/db";
 
+const DEFAULT_SYLLABUS_STATUS = "draft";
+const DEFAULT_SYLLABUS_VERSION = 1;
+
 export async function saveSyllabusDraft(payload) {
   if (!payload?.id) {
     return { error: "Syllabus ID is required." };
   }
 
   await query(
-    "insert into syllabi (id, status, version) values (?, 'draft', 1) on duplicate key update updated_at = utc_timestamp()",
-    [payload.id],
+    "insert into syllabi (id, status, version) values (?, ?, ?) on duplicate key update updated_at = utc_timestamp()",
+    [payload.id, DEFAULT_SYLLABUS_STATUS, DEFAULT_SYLLABUS_VERSION],
   );
 
   const updatedRows = await query("select updated_at from syllabi where id = ? limit 1", [payload.id]);

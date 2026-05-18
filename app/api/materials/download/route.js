@@ -15,15 +15,19 @@ export async function GET(request) {
   const uploadRoot = resolve("/tmp/syllabus-materials");
   const resolvedPath = resolve(payload.filePath);
 
-  if (!resolvedPath.startsWith(`${uploadRoot}${sep}`)) {
+  if (resolvedPath !== uploadRoot && !resolvedPath.startsWith(uploadRoot + sep)) {
     return NextResponse.json({ error: "Invalid file path." }, { status: 400 });
   }
 
-  const fileBuffer = await readFile(resolvedPath);
-  return new NextResponse(fileBuffer, {
-    headers: {
-      "Content-Type": "application/octet-stream",
-      "Content-Disposition": `attachment; filename="${basename(payload.fileName)}"`,
-    },
-  });
+  try {
+    const fileBuffer = await readFile(resolvedPath);
+    return new NextResponse(fileBuffer, {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": `attachment; filename="${basename(payload.fileName)}"`,
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "Material not found." }, { status: 404 });
+  }
 }

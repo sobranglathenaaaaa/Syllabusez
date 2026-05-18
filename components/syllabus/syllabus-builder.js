@@ -61,9 +61,13 @@ export function SyllabusBuilder({ initialDraft, onSave }) {
     formData.append("file", file);
 
     setFileStatus("Uploading...");
-    const response = await fetch("/api/materials/upload", { method: "POST", body: formData });
-    const data = await response.json();
-    setFileStatus(response.ok ? `Uploaded. Signed URL ready: ${data.signedUrl}` : data.error || "Upload failed.");
+    try {
+      const response = await fetch("/api/materials/upload", { method: "POST", body: formData });
+      const data = await response.json();
+      setFileStatus(response.ok ? `Uploaded. Signed URL ready: ${data.signedUrl}` : data.error || "Upload failed.");
+    } catch {
+      setFileStatus("Upload failed due to a network error.");
+    }
   }
 
   function handleSave() {
@@ -83,8 +87,16 @@ export function SyllabusBuilder({ initialDraft, onSave }) {
         <p className="text-sm text-zinc-600">Create outcomes and weekly plans with optimistic updates.</p>
       </header>
 
-      <label className="block text-sm font-medium">Syllabus title</label>
-      <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded border p-2" placeholder="Course syllabus title" />
+      <label htmlFor="syllabus-title" className="block text-sm font-medium">
+        Syllabus title
+      </label>
+      <input
+        id="syllabus-title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="w-full rounded border p-2"
+        placeholder="Course syllabus title"
+      />
 
       <div>
         <h3 className="mb-2 font-medium">Learning Outcomes</h3>
@@ -141,10 +153,12 @@ export function SyllabusBuilder({ initialDraft, onSave }) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Upload Material</label>
-        <input type="file" onChange={uploadFile} className="block text-sm" />
+        <label htmlFor="material-upload" className="mb-1 block text-sm font-medium">
+          Upload Material
+        </label>
+        <input id="material-upload" type="file" onChange={uploadFile} className="block text-sm" />
         {fileStatus ? (
-          <p role="status" aria-live="polite" className="mt-2 text-xs text-zinc-600 break-all">
+          <p role="status" aria-live="polite" aria-atomic="true" className="mt-2 text-xs text-zinc-600 break-all">
             {fileStatus}
           </p>
         ) : null}

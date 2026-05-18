@@ -143,7 +143,11 @@ export function SyllabusBuilder({ initialDraft, onSave }) {
       <div>
         <label className="mb-1 block text-sm font-medium">Upload Material</label>
         <input type="file" onChange={uploadFile} className="block text-sm" />
-        {fileStatus ? <p className="mt-2 text-xs text-zinc-600 break-all">{fileStatus}</p> : null}
+        {fileStatus ? (
+          <p role="status" aria-live="polite" className="mt-2 text-xs text-zinc-600 break-all">
+            {fileStatus}
+          </p>
+        ) : null}
       </div>
 
       <button disabled={isPending} className="rounded bg-zinc-900 px-4 py-2 text-white disabled:opacity-60" type="button" onClick={handleSave}>

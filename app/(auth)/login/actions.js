@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { findOrCreateProfile } from "@/services/auth.service";
 import { roleHomePath } from "@/types/roles";
 
-export async function loginAction(_, formData) {
+export async function loginAction(formData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const fullName = String(formData.get("fullName") || "").trim();
   const role = String(formData.get("role") || "student");

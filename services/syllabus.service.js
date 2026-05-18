@@ -11,10 +11,15 @@ export async function saveSyllabusDraft(payload) {
     [payload.id],
   );
 
+  const updatedRows = await query("select updated_at from syllabi where id = ? limit 1", [payload.id]);
+  const updatedAt = updatedRows[0]?.updated_at
+    ? new Date(updatedRows[0].updated_at).toISOString()
+    : new Date().toISOString();
+
   return {
     data: {
       ...payload,
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAt,
     },
   };
 }

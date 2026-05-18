@@ -9,13 +9,13 @@ const protectedRoutes = {
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
-  const routeRole = Object.entries(protectedRoutes).find(([route]) => pathname.startsWith(route));
+  const matchedRoute = Object.entries(protectedRoutes).find(([route]) => pathname.startsWith(route));
 
-  if (!routeRole) {
+  if (!matchedRoute) {
     return NextResponse.next();
   }
 
-  const [, requiredRole] = routeRole;
+  const [, requiredRole] = matchedRoute;
   const userRole = request.cookies.get("session_role")?.value;
 
   if (!userRole) {

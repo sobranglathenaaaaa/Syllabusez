@@ -12,10 +12,10 @@ export async function POST(request) {
       return NextResponse.json({ error: "No users provided" }, { status: 400 });
     }
 
-    const results = { success: 0, failed: 0, errors: [] };
+    const results = { success: 0, failed: 0, errors: [], imported: [] };
 
     for (const user of users) {
-      const { email, lastname, firstname, middlename } = user;
+      const { email, lastname, firstname, middlename, password } = user;
 
       if (!email) {
         results.failed++;
@@ -26,12 +26,18 @@ export async function POST(request) {
       const fullName = [lastname, firstname, middlename].filter(Boolean).join(", ");
       const id = crypto.randomUUID();
 
+      // Auto-generate default password if none is provided
+      const emailPrefix = email.split("@")[0] || "student";
+      const generatedPassword = `pup_${emailPrefix}`;
+      const activePassword = (password && password.trim()) || generatedPassword;
+
       try {
         await query(
-          "INSERT INTO users (id, full_name, email, role) VALUES (?, ?, ?, 'student')",
-          [id, fullName || null, email.trim().toLowerCase()]
+          "INSERT INTO users (id, full_name, email, role, password) VALUES (?, ?, ?, 'student', ?)",
+          [id, fullName || null, email.trim().toLowerCase(), activePassword]
         );
         results.success++;
+        results.imported.push({ email: email.trim().toLowerCase(), fullName, password: activePassword });
       } catch (err) {
         results.failed++;
         if (err.code === "ER_DUP_ENTRY") {

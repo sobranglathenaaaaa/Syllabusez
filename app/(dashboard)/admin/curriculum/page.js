@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { 
-  BookOpen, 
-  Upload, 
-  Download, 
-  Trash2, 
-  CheckCircle2, 
-  AlertCircle, 
+import {
+  BookOpen,
+  Upload,
+  Download,
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
   Clock,
   ArrowRight,
   FileText,
@@ -20,7 +20,7 @@ export default function AdminCurriculumPage() {
   const [departments, setDepartments] = useState([]);
   const [customCurricula, setCustomCurricula] = useState({});
   const [loading, setLoading] = useState(true);
-  
+
   // Selected files mapped by departmentId
   const [selectedFiles, setSelectedFiles] = useState({});
   const [uploading, setUploading] = useState({});
@@ -42,7 +42,7 @@ export default function AdminCurriculumPage() {
 
       const currRes = await fetch("/api/curriculum");
       const currData = await currRes.json();
-      
+
       // Map curricula records by department_id
       const curriculaMap = {};
       currData.curricula?.forEach(c => {
@@ -160,7 +160,7 @@ export default function AdminCurriculumPage() {
   const openPreview = async (deptId, fileName, deptName) => {
     const fileUrl = getCustomUrl(deptId, fileName);
     setPreviewFile({ url: fileUrl, name: fileName, deptName });
-    
+
     const ext = fileName.split('.').pop().toLowerCase();
     if (ext === "txt") {
       setLoadingText(true);
@@ -189,11 +189,10 @@ export default function AdminCurriculumPage() {
     <div className="space-y-8 relative">
       {/* Toast Alert Notifications */}
       {actionMessage && (
-        <div className={`fixed top-5 right-5 z-50 p-4 rounded-2xl shadow-xl flex items-center gap-3 max-w-md animate-in fade-in slide-in-from-top-4 duration-300 border ${
-          actionMessage.type === "success" 
-            ? "bg-green-50 border-green-200 text-green-800" 
-            : "bg-red-50 border-red-200 text-red-800"
-        }`}>
+        <div className={`fixed top-5 right-5 z-50 p-4 rounded-2xl shadow-xl flex items-center gap-3 max-w-md animate-in fade-in slide-in-from-top-4 duration-300 border ${actionMessage.type === "success"
+          ? "bg-green-50 border-green-200 text-green-800"
+          : "bg-red-50 border-red-200 text-red-800"
+          }`}>
           {actionMessage.type === "success" ? <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />}
           <span className="text-xs font-bold leading-relaxed">{actionMessage.text}</span>
         </div>
@@ -207,7 +206,7 @@ export default function AdminCurriculumPage() {
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900">Curriculum Registry Manager</h3>
-            <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Branch Academic Administration</p>
+            <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Academic Programs of PUP San Juan</p>
           </div>
         </div>
 
@@ -225,17 +224,17 @@ export default function AdminCurriculumPage() {
           const isUploading = uploading[dept.id];
 
           return (
-            <div 
-              key={dept.id} 
+            <div
+              key={dept.id}
               className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between"
             >
               {/* Program Header */}
               <div className="p-6 border-b border-gray-50 space-y-3 bg-gradient-to-br from-white to-gray-50/30">
                 <div className="flex justify-between items-start gap-3">
-                  <div className="px-3 min-w-[2.5rem] h-10 rounded-xl bg-red-50 text-[#800000] font-bold text-xs flex items-center justify-center shadow-inner border border-red-100 flex-shrink-0">
+                  <div className="w-20 h-10 rounded-xl bg-red-50 text-[#800000] font-bold text-xs flex items-center justify-center shadow-inner border border-red-100 flex-shrink-0">
                     {dept.name.match(/\(([^)]+)\)/)?.[1] || "DEPT"}
                   </div>
-                  
+
                   {/* Status Badge */}
                   {customSheet ? (
                     <span className="px-2.5 py-1 text-[10px] font-extrabold bg-green-50 text-green-700 border border-green-200 rounded-lg flex items-center gap-1">
@@ -248,13 +247,13 @@ export default function AdminCurriculumPage() {
                     </span>
                   )}
                 </div>
-                
+
                 <h4 className="font-bold text-sm text-gray-900 leading-snug">{dept.name}</h4>
               </div>
 
               {/* Upload & Action Details */}
               <div className="p-6 flex-1 flex flex-col justify-between gap-6">
-                
+
                 {/* Current Active Sheet Details */}
                 {customSheet ? (
                   <div className="p-4 border border-green-100 rounded-2xl bg-green-50/20 space-y-2.5">
@@ -268,24 +267,24 @@ export default function AdminCurriculumPage() {
                       <Clock className="w-3.5 h-3.5" />
                       <span>Uploaded {formatDate(customSheet.uploaded_at)}</span>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-2 pt-1 border-t border-green-100/50 mt-2">
-                      <button 
+                      <button
                         onClick={() => openPreview(dept.id, customSheet.file_name, dept.name)}
                         className="px-3 py-1.5 bg-[#800000] hover:bg-red-900 text-white font-extrabold text-[10px] rounded-lg transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>View Document</span>
                       </button>
-                      <a 
-                        href={getCustomUrl(dept.id, customSheet.file_name)} 
+                      <a
+                        href={getCustomUrl(dept.id, customSheet.file_name)}
                         download
                         className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-extrabold text-[10px] rounded-lg transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <Download className="w-3 h-3" />
                         <span>Download</span>
                       </a>
-                      <button 
+                      <button
                         onClick={() => handleDelete(dept.id)}
                         className="px-3 py-1.5 border border-red-200 hover:bg-red-50 text-red-600 font-extrabold text-[10px] rounded-lg transition-colors flex items-center gap-1"
                       >
@@ -303,15 +302,15 @@ export default function AdminCurriculumPage() {
                 {/* Upload Action Form */}
                 <div className="space-y-3">
                   <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">Upload Updated Curriculum</span>
-                  
+
                   <div className="flex gap-2 items-center">
                     <label className="flex-1 flex items-center gap-2 px-3 py-2.5 border border-dashed border-[#800000]/20 hover:border-[#800000]/60 text-gray-600 hover:text-gray-900 rounded-xl font-semibold text-xs cursor-pointer transition-all bg-gray-50/20">
                       <Upload className="w-4 h-4 text-[#800000]" />
                       <span className="truncate max-w-[150px]">
                         {chosenFile ? chosenFile.name : "Select TXT, PDF, or Word"}
                       </span>
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         ref={el => fileRefs.current[dept.id] = el}
                         accept=".pdf,.txt,.doc,.docx"
                         onChange={(e) => handleFileChange(dept.id, e)}
@@ -345,7 +344,7 @@ export default function AdminCurriculumPage() {
       {previewFile && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 sm:p-6 md:p-10 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl border border-gray-100 relative overflow-hidden animate-in zoom-in-95 duration-200">
-            
+
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
               <div className="space-y-1">
@@ -355,7 +354,7 @@ export default function AdminCurriculumPage() {
                   <span>Curriculum Sheet Preview: {previewFile.name}</span>
                 </h4>
               </div>
-              <button 
+              <button
                 onClick={() => setPreviewFile(null)}
                 className="p-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all flex items-center justify-center"
               >
@@ -367,11 +366,11 @@ export default function AdminCurriculumPage() {
             <div className="flex-1 p-6 overflow-y-auto bg-gray-100/30 flex flex-col justify-center">
               {(() => {
                 const ext = previewFile.name.split('.').pop().toLowerCase();
-                
+
                 if (ext === "pdf") {
                   return (
-                    <iframe 
-                      src={previewFile.url} 
+                    <iframe
+                      src={previewFile.url}
                       className="w-full h-full rounded-2xl border border-gray-200 bg-white shadow-sm"
                       title="Curriculum Document Viewer"
                     />
@@ -403,8 +402,8 @@ export default function AdminCurriculumPage() {
                       <HelpCircle className="w-4.5 h-4.5" />
                       <span>If the Office Document doesn't load below, please use the direct download link at the bottom.</span>
                     </div>
-                    <iframe 
-                      src={googleViewUrl} 
+                    <iframe
+                      src={googleViewUrl}
                       className="flex-1 w-full border-none"
                       title="Office Document Preview"
                     />
@@ -416,7 +415,7 @@ export default function AdminCurriculumPage() {
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
               <span className="text-[10px] font-semibold text-gray-400">PUP San Juan Syllabus Management Portal</span>
-              <a 
+              <a
                 href={previewFile.url}
                 download
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-colors flex items-center gap-1.5"

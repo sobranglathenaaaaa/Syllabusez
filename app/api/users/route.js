@@ -34,7 +34,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { email, full_name, role } = body;
+    const { email, full_name, role, password } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -45,8 +45,8 @@ export async function POST(request) {
 
     const id = crypto.randomUUID();
     await query(
-      "INSERT INTO users (id, full_name, email, role) VALUES (?, ?, ?, ?)",
-      [id, full_name || null, email, role]
+      "INSERT INTO users (id, full_name, email, role, password) VALUES (?, ?, ?, ?, ?)",
+      [id, full_name || null, email, role, password || null]
     );
 
     return NextResponse.json({ success: true, id });

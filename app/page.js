@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import puplogo from "@/lib/image/puplogo.png";
 import pupsj from "@/lib/image/pupsj.png";
 
 export default function Home() {
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleQuickLogin = async (role) => {
     try {
       // Trigger seed to ensure default profiles exist
@@ -37,6 +40,7 @@ export default function Home() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const emailInput = document.getElementById("email").value.trim().toLowerCase();
+    const passwordInput = document.getElementById("password").value;
 
     let role = "student";
     if (emailInput.includes("admin")) {
@@ -45,7 +49,49 @@ export default function Home() {
       role = "instructor";
     }
 
-    await handleQuickLogin(role);
+    try {
+      // Lookup email in the database to get their actual profile
+      const res = await fetch(`/api/users?search=${encodeURIComponent(emailInput)}`);
+      const data = await res.json();
+      const matchedUser = data.users?.find(u => u.email.toLowerCase() === emailInput);
+
+      if (matchedUser) {
+        // Log in as the exact user matched in database!
+        document.cookie = `session_role=${matchedUser.role}; path=/; max-age=3600`;
+        document.cookie = `session_user_id=${matchedUser.id}; path=/; max-age=3600`;
+        document.cookie = `session_email=${matchedUser.email}; path=/; max-age=3600`;
+        document.cookie = `session_name=${encodeURIComponent(matchedUser.full_name || "PUP User")}; path=/; max-age=3600`;
+        window.location.href = `/${matchedUser.role}`;
+      } else {
+        // Auto-register this as a custom account (developer convenience flow)
+        const nameFormatted = emailInput.split("@")[0].replace(/\./g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        const createRes = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: emailInput,
+            full_name: nameFormatted,
+            role: role,
+            password: passwordInput !== "••••••••" ? passwordInput : null
+          })
+        });
+
+        if (createRes.ok) {
+          const createData = await createRes.json();
+          // Log in as the newly created user
+          document.cookie = `session_role=${role}; path=/; max-age=3600`;
+          document.cookie = `session_user_id=${createData.id}; path=/; max-age=3600`;
+          document.cookie = `session_email=${emailInput}; path=/; max-age=3600`;
+          document.cookie = `session_name=${encodeURIComponent(nameFormatted)}; path=/; max-age=3600`;
+          window.location.href = `/${role}`;
+        } else {
+          await handleQuickLogin(role);
+        }
+      }
+    } catch (err) {
+      console.error("Custom DB login error, falling back:", err);
+      await handleQuickLogin(role);
+    }
   };
 
   return (
@@ -128,17 +174,33 @@ export default function Home() {
                 >
                   Password
                 </label>
-                <div className="mt-2">
+                <div className="mt-2 relative rounded-xl shadow-sm">
                   <input
                     id="password"
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
                     defaultValue="••••••••"
-                    className="block w-full appearance-none rounded-xl border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm text-gray-900"
+                    className="block w-full appearance-none rounded-xl border border-gray-300 pl-4 pr-12 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm text-gray-900"
                     placeholder="Enter your password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
               </div>
 

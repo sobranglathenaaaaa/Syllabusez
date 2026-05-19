@@ -11,6 +11,11 @@ export function SyllabusList({ role, userId }) {
   // Search & Filter state
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   // Modal State for Viewing
   const [selectedSyllabus, setSelectedSyllabus] = useState(null);
@@ -24,7 +29,7 @@ export function SyllabusList({ role, userId }) {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (statusFilter) params.set("status", statusFilter);
-      
+
       // If student, we only show approved syllabi
       if (role === "student") {
         params.set("status", "approved");
@@ -62,7 +67,7 @@ export function SyllabusList({ role, userId }) {
 
   const handlePrint = (syllabus) => {
     if (!syllabus) return;
-    
+
     // Create printable document in a new window/iframe
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
@@ -273,7 +278,7 @@ export function SyllabusList({ role, userId }) {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/10 bg-white"
             >
-              <option value="">All Statuses</option>
+              <option value="">All Status</option>
               <option value="draft">Draft</option>
               <option value="submitted">Submitted</option>
               <option value="approved">Approved</option>
@@ -291,88 +296,125 @@ export function SyllabusList({ role, userId }) {
             <span className="text-xs font-semibold text-gray-500">Loading syllabus list...</span>
           </div>
         ) : syllabi.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  <th className="px-6 py-4">Course</th>
-                  {role === "admin" && <th className="px-6 py-4">Instructor</th>}
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Version</th>
-                  <th className="px-6 py-4">Last Updated</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {syllabi.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-bold text-red-900 block">{item.code}</span>
-                      <span className="text-xs font-medium text-gray-700 block mt-0.5">{item.course_title}</span>
-                    </td>
-                    {role === "admin" && (
-                      <td className="px-6 py-4 text-xs font-semibold text-gray-600">
-                        {item.instructor_name || "Unassigned"}
-                      </td>
-                    )}
-                    <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-extrabold text-gray-700">v{item.version}</span>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-medium text-gray-400">
-                      {new Date(item.updated_at).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        {/* Actions based on role and status */}
+          (() => {
+            const totalPages = Math.ceil(syllabi.length / 10);
+            const paginatedSyllabi = syllabi.slice((currentPage - 1) * 10, currentPage * 10);
+            return (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        <th className="px-6 py-4">Course</th>
+                        {role === "admin" && <th className="px-6 py-4">Instructor</th>}
+                        <th className="px-6 py-4 text-center">Status</th>
+                        <th className="px-6 py-4 text-center">Version</th>
+                        <th className="px-6 py-4 text-center">Last Updated</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {paginatedSyllabi.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
+                          <td className="px-6 py-4">
+                            <span className="text-xs font-bold text-red-900 block">{item.code}</span>
+                            <span className="text-xs font-medium text-gray-700 block mt-0.5">{item.course_title}</span>
+                          </td>
+                          {role === "admin" && (
+                            <td className="px-6 py-4 text-xs font-semibold text-gray-600">
+                              {item.instructor_name || "Unassigned"}
+                            </td>
+                          )}
+                          <td className="px-6 py-4">
+                            <div className="flex justify-center">
+                              {getStatusBadge(item.status)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-xs font-extrabold text-gray-700">v{item.version}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center text-xs font-medium text-gray-400">
+                            {new Date(item.updated_at).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end items-center gap-2">
+                              {/* Actions based on role and status */}
+                              <button
+                                onClick={() => viewSyllabusDetails(item)}
+                                className="p-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>View</span>
+                              </button>
+
+                              {/* Edit for draft or rejected (only for instructor) */}
+                              {role === "instructor" && (item.status === "draft" || item.status === "rejected") && (
+                                <Link
+                                  href={`/instructor/syllabi/${item.id}/edit`}
+                                  className="p-1.5 rounded-lg border border-red-100 hover:bg-red-50 text-red-700 hover:text-red-800 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                  <span>Edit</span>
+                                </Link>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                    <div className="text-xs font-semibold text-gray-500">
+                      Showing <span className="text-gray-900 font-bold">{Math.min(syllabi.length, (currentPage - 1) * 10 + 1)}</span> to{" "}
+                      <span className="text-gray-900 font-bold">{Math.min(syllabi.length, currentPage * 10)}</span> of{" "}
+                      <span className="text-gray-900 font-bold">{syllabi.length}</span> items
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        className="px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
                         <button
-                          onClick={() => viewSyllabusDetails(item)}
-                          className="p-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            currentPage === pageNum
+                              ? "bg-[#800000] text-white shadow-sm"
+                              : "border border-gray-200 hover:bg-gray-50 text-gray-600"
+                          }`}
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View</span>
+                          {pageNum}
                         </button>
+                      ))}
 
-                        {/* Edit for draft or rejected (only for instructor) */}
-                        {role === "instructor" && (item.status === "draft" || item.status === "rejected") && (
-                          <Link
-                            href={`/instructor/syllabi/${item.id}/edit`}
-                            className="p-1.5 rounded-lg border border-red-100 hover:bg-red-50 text-red-700 hover:text-red-800 transition-colors flex items-center gap-1.5 text-xs font-semibold"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </Link>
-                        )}
-
-                        {/* Print / Download for approved */}
-                        {item.status === "approved" && (
-                          <button
-                            onClick={() => {
-                              // If details are loaded, print detailed. Otherwise query details then print
-                              fetch(`/api/syllabi/${item.id}`)
-                                .then(res => res.json())
-                                .then(data => handlePrint(data.syllabus))
-                                .catch(() => alert("Failed to fetch syllabus details for printing."));
-                            }}
-                            className="p-1.5 rounded-lg border border-red-100 hover:bg-red-50 text-[#800000] hover:text-red-900 transition-colors flex items-center gap-1.5 text-xs font-semibold"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Download PDF</span>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        className="px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()
         ) : (
           <div className="py-20 text-center max-w-sm mx-auto flex flex-col items-center justify-center gap-3">
             <div className="p-3 bg-red-50 text-[#800000] rounded-full">
@@ -416,7 +458,7 @@ export function SyllabusList({ role, userId }) {
                 </div>
               ) : detailedSyllabus ? (
                 <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-8 shadow-sm">
-                  
+
                   {/* Status Banner */}
                   {detailedSyllabus.status === "rejected" && detailedSyllabus.approval_comment && (
                     <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex gap-3 text-red-800">

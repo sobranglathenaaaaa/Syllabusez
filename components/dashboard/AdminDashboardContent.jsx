@@ -166,8 +166,8 @@ export function AdminDashboardContent() {
                 <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                   <th className="px-6 py-4">Course</th>
                   <th className="px-6 py-4">Instructor</th>
-                  <th className="px-6 py-4">Version</th>
-                  <th className="px-6 py-4">Submitted Date</th>
+                  <th className="px-6 py-4 text-center">Version</th>
+                  <th className="px-6 py-4 text-center">Submitted Date</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -181,12 +181,12 @@ export function AdminDashboardContent() {
                     <td className="px-6 py-4 text-xs font-semibold text-gray-600">
                       {syllabus.instructor_name || "Unassigned"}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/50 rounded-md">
                         v{syllabus.version}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-xs font-medium text-gray-400">
+                    <td className="px-6 py-4 text-center text-xs font-medium text-gray-400">
                       {new Date(syllabus.updated_at).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",

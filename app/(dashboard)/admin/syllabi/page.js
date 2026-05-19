@@ -8,10 +8,7 @@ export default async function AdminSyllabiPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-bold text-gray-900">Syllabus Registry</h3>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-0.5">Global Course Archive</p>
-      </div>
+      <h3 className="text-lg font-bold text-gray-900">Syllabus Registry</h3>
       <SyllabusList role={role} userId={userId} />
     </div>
   );

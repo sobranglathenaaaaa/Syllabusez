@@ -6,9 +6,46 @@ import puplogo from "@/lib/image/puplogo.png";
 import pupsj from "@/lib/image/pupsj.png";
 
 export default function Home() {
-  const handleQuickLogin = (role) => {
-    document.cookie = `session_role=${role}; path=/; max-age=3600`;
-    window.location.href = `/${role}`;
+  const handleQuickLogin = async (role) => {
+    try {
+      // Trigger seed to ensure default profiles exist
+      await fetch("/api/seed", { method: "POST" });
+      
+      const roleProfiles = {
+        admin: { id: "a1a1a1a1-1111-4111-a111-111111111111", email: "admin@pup.edu.ph", name: "Dr. Danilo T. dela Cruz" },
+        instructor: { id: "i2i2i2i2-2222-4222-i222-222222222222", email: "instructor@pup.edu.ph", name: "Prof. Maria Elizabeth C. Santos" },
+        student: { id: "s3s3s3s3-3333-4333-s333-333333333333", email: "student@pup.edu.ph", name: "Juan G. Gomez" }
+      };
+
+      const user = roleProfiles[role];
+      if (user) {
+        document.cookie = `session_role=${role}; path=/; max-age=3600`;
+        document.cookie = `session_user_id=${user.id}; path=/; max-age=3600`;
+        document.cookie = `session_email=${user.email}; path=/; max-age=3600`;
+        document.cookie = `session_name=${encodeURIComponent(user.name)}; path=/; max-age=3600`;
+      }
+      
+      window.location.href = `/${role}`;
+    } catch (e) {
+      console.error("Login failed", e);
+      // Fallback
+      document.cookie = `session_role=${role}; path=/; max-age=3600`;
+      window.location.href = `/${role}`;
+    }
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    const emailInput = document.getElementById("email").value.trim().toLowerCase();
+    
+    let role = "student";
+    if (emailInput.includes("admin")) {
+      role = "admin";
+    } else if (emailInput.includes("instructor")) {
+      role = "instructor";
+    }
+    
+    await handleQuickLogin(role);
   };
 
   return (
@@ -62,7 +99,7 @@ export default function Home() {
           </div>
 
           <div className="mt-8">
-            <form className="space-y-6" action="#" method="POST">
+            <form className="space-y-6" onSubmit={handleFormSubmit}>
               <div>
                 <label
                   htmlFor="email"
@@ -77,7 +114,8 @@ export default function Home() {
                     type="email"
                     autoComplete="email"
                     required
-                    className="block w-full appearance-none rounded-xl border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm"
+                    defaultValue="instructor@pup.edu.ph"
+                    className="block w-full appearance-none rounded-xl border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm text-gray-900"
                     placeholder="Enter your email"
                   />
                 </div>
@@ -97,7 +135,8 @@ export default function Home() {
                     type="password"
                     autoComplete="current-password"
                     required
-                    className="block w-full appearance-none rounded-xl border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm"
+                    defaultValue="••••••••"
+                    className="block w-full appearance-none rounded-xl border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm text-gray-900"
                     placeholder="Enter your password"
                   />
                 </div>

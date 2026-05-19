@@ -1,6 +1,9 @@
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { cookies } from "next/headers";
+import { Greeting } from "@/components/dashboard/Greeting";
+import { AdminDashboardContent } from "@/components/dashboard/AdminDashboardContent";
 import { query } from "@/lib/db";
 import Link from "next/link";
+import { Users, FileText, CheckSquare, Layers } from "lucide-react";
 
 async function getAdminStats() {
   try {
@@ -8,109 +11,105 @@ async function getAdminStats() {
     const [students] = await query("SELECT COUNT(*) as count FROM profiles WHERE role = 'student'");
     const [approved] = await query("SELECT COUNT(*) as count FROM syllabi WHERE status = 'approved'");
     const [pending] = await query("SELECT COUNT(*) as count FROM syllabi WHERE status = 'submitted'");
-    const [departments] = await query("SELECT COUNT(*) as count FROM departments");
     return {
       instructors: instructors?.count ?? 0,
       students: students?.count ?? 0,
       approved: approved?.count ?? 0,
       pending: pending?.count ?? 0,
-      departments: departments?.count ?? 0,
     };
-  } catch {
-    return { instructors: 0, students: 0, approved: 0, pending: 0, departments: 0 };
-  }
-}
-
-async function getPendingApprovals() {
-  try {
-    const rows = await query(`
-      SELECT s.id, c.code, c.title as course_title, p.full_name as instructor_name, s.created_at
-      FROM syllabi s
-      LEFT JOIN courses c ON s.course_id = c.id
-      LEFT JOIN profiles p ON s.instructor_id = p.id
-      WHERE s.status = 'submitted'
-      ORDER BY s.created_at DESC
-      LIMIT 5
-    `);
-    return rows || [];
-  } catch {
-    return [];
+  } catch (error) {
+    console.error("Failed to query admin stats:", error);
+    return { instructors: 0, students: 0, approved: 0, pending: 0 };
   }
 }
 
 export default async function AdminDashboard() {
+  const cookieStore = await cookies();
+  const name = decodeURIComponent(cookieStore.get("session_name")?.value || "Administrator");
   const stats = await getAdminStats();
-  const pendingApprovals = await getPendingApprovals();
 
   return (
-    <DashboardShell title="Admin Dashboard" role="admin">
-      <div className="space-y-8">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: 'Total Instructors', value: String(stats.instructors), color: 'bg-blue-50 text-blue-700' },
-            { label: 'Total Students', value: String(stats.students), color: 'bg-indigo-50 text-indigo-700' },
-            { label: 'Approved Syllabi', value: String(stats.approved), color: 'bg-green-50 text-green-700' },
-            { label: 'Pending Review', value: String(stats.pending), color: 'bg-amber-50 text-amber-700' },
-          ].map((stat) => (
-            <div key={stat.label} className="flex items-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-              <div className={`p-4 rounded-xl ${stat.color}`}>
-                <span className="text-2xl font-bold">{stat.value}</span>
+    <div className="space-y-8">
+      {/* 1. Greeting Banner */}
+      <Greeting fullName={name} />
+
+      {/* 2. Stats Grid */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Total Instructors", value: String(stats.instructors), color: "bg-blue-50 text-blue-700 border-blue-100", icon: Users },
+          { label: "Enrolled Students", value: String(stats.students), color: "bg-indigo-50 text-indigo-700 border-indigo-100", icon: Users },
+          { label: "Approved Syllabi", value: String(stats.approved), color: "bg-green-50 text-green-700 border-green-100", icon: FileText },
+          { label: "Pending Approvals", value: String(stats.pending), color: "bg-amber-50 text-amber-700 border-amber-100", icon: CheckSquare, badge: stats.pending > 0 ? "Action Required" : null },
+        ].map((stat, idx) => {
+          const Icon = stat.icon;
+          return (
+            <div key={idx} className="flex items-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+              <div className={`p-4 rounded-xl border ${stat.color} mr-4 transition-transform group-hover:scale-110 duration-300`}>
+                <Icon className="w-6 h-6" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+              <div>
+                <span className="text-2xl font-black text-gray-900 block leading-tight">{stat.value}</span>
+                <span className="text-xs font-semibold text-gray-400 block mt-0.5">{stat.label}</span>
+                {stat.badge && (
+                  <span className="absolute top-3 right-3 px-2 py-0.5 text-[8px] font-extrabold uppercase bg-red-100 text-red-700 rounded-md border border-red-200">
+                    {stat.badge}
+                  </span>
+                )}
               </div>
             </div>
-          ))}
+          );
+        })}
+      </div>
+
+      {/* 3. Main Admin Workspace (Approvals Panel + Quick Links) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left 2 Columns: Pendings approvals table */}
+        <div className="lg:col-span-2">
+          <AdminDashboardContent />
         </div>
 
-        {/* Pending Actions + Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h3 className="text-lg font-semibold text-gray-900">Pending Syllabus Approvals</h3>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {pendingApprovals.length > 0 ? (
-                pendingApprovals.map((item, i) => (
-                  <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{item.code} - {item.course_title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Submitted by {item.instructor_name || 'Unknown'}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">Approve</button>
-                      <button className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Review</button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="px-6 py-12 text-center text-gray-500 text-sm">
-                  There are no syllabi pending approval at this time.
+        {/* Right 1 Column: Quick Action Shortcuts */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+            <h3 className="text-sm font-black text-gray-800 uppercase tracking-widest border-b border-gray-100 pb-3 mb-4">Quick Shortcuts</h3>
+            <div className="space-y-3">
+              <Link href="/admin/users" className="w-full py-3 px-4 flex justify-between items-center bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-800 rounded-xl font-bold text-xs transition-all border border-transparent hover:border-red-100 group">
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-gray-400 group-hover:text-red-700" />
+                  <span>Manage Instructors & Students</span>
                 </div>
-              )}
+                <span className="font-extrabold text-sm transition-transform group-hover:translate-x-0.5">→</span>
+              </Link>
+
+              <button className="w-full py-3 px-4 flex justify-between items-center bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-800 rounded-xl font-bold text-xs transition-all border border-transparent hover:border-red-100 group">
+                <div className="flex items-center gap-3">
+                  <Layers className="w-4 h-4 text-gray-400 group-hover:text-red-700" />
+                  <span>Curriculum Programs</span>
+                </div>
+                <span className="font-extrabold text-sm transition-transform group-hover:translate-x-0.5">→</span>
+              </button>
+
+              <Link href="/admin/syllabi" className="w-full py-3 px-4 flex justify-between items-center bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-800 rounded-xl font-bold text-xs transition-all border border-transparent hover:border-red-100 group">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-gray-400 group-hover:text-red-700" />
+                  <span>Syllabus Directory List</span>
+                </div>
+                <span className="font-extrabold text-sm transition-transform group-hover:translate-x-0.5">→</span>
+              </Link>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              <Link href="/admin/users" className="w-full py-3 px-4 flex justify-between items-center bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-800 rounded-xl font-medium transition-colors border border-transparent hover:border-red-100">
-                <span>Manage Users</span>
-                <span>→</span>
-              </Link>
-              <button className="w-full py-3 px-4 flex justify-between items-center bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-800 rounded-xl font-medium transition-colors border border-transparent hover:border-red-100">
-                <span>Manage Departments</span>
-                <span>→</span>
-              </button>
-              <button className="w-full py-3 px-4 flex justify-between items-center bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-800 rounded-xl font-medium transition-colors border border-transparent hover:border-red-100">
-                <span>Review Syllabi</span>
-                <span>→</span>
-              </button>
-            </div>
+          {/* Academic Info Banner */}
+          <div className="bg-gradient-to-br from-[#800000] to-red-950 text-white rounded-3xl p-6 shadow-sm border border-red-950/20 relative overflow-hidden">
+            <div className="absolute right-0 bottom-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mb-10" />
+            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">Quality Assurance</span>
+            <h4 className="font-extrabold text-base mt-2">PUP Curriculum Management</h4>
+            <p className="text-xs text-white/70 leading-relaxed mt-2 font-medium">
+              Ensure all course syllabi align with outcomes-based education standards. Syllabi must undergo verification by branch department chairpersons prior to catalog publishing.
+            </p>
           </div>
         </div>
       </div>
-    </DashboardShell>
+    </div>
   );
 }

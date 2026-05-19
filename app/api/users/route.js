@@ -9,7 +9,7 @@ export async function GET(request) {
     const search = searchParams.get("search") || "";
     const role = searchParams.get("role") || "";
 
-    let sql = "SELECT id, full_name, email, role, created_at FROM profiles WHERE 1=1";
+    let sql = "SELECT id, full_name, email, role, created_at FROM users WHERE 1=1";
     const values = [];
 
     if (search) {
@@ -45,7 +45,7 @@ export async function POST(request) {
 
     const id = crypto.randomUUID();
     await query(
-      "INSERT INTO profiles (id, full_name, email, role) VALUES (?, ?, ?, ?)",
+      "INSERT INTO users (id, full_name, email, role) VALUES (?, ?, ?, ?)",
       [id, full_name || null, email, role]
     );
 

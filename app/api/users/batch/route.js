@@ -28,7 +28,7 @@ export async function POST(request) {
 
       try {
         await query(
-          "INSERT INTO profiles (id, full_name, email, role) VALUES (?, ?, ?, 'student')",
+          "INSERT INTO users (id, full_name, email, role) VALUES (?, ?, ?, 'student')",
           [id, fullName || null, email.trim().toLowerCase()]
         );
         results.success++;

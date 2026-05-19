@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
               p.full_name as instructor_name, p.email as instructor_email
        FROM syllabi s
        LEFT JOIN courses c ON s.course_id = c.id
-       LEFT JOIN profiles p ON s.instructor_id = p.id
+       LEFT JOIN users p ON s.instructor_id = p.id
        WHERE s.id = ?
        LIMIT 1`,
       [id]

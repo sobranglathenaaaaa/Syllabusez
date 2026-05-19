@@ -15,7 +15,7 @@ async function getStudentCourses(studentId) {
        FROM enrollments e
        JOIN courses c ON e.course_id = c.id
        LEFT JOIN syllabi s ON s.course_id = c.id AND s.status = 'approved'
-       LEFT JOIN profiles p ON s.instructor_id = p.id
+       LEFT JOIN users p ON s.instructor_id = p.id
        WHERE e.user_id = ?
        ORDER BY c.code ASC`,
       [studentId]

@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }) {
   // Fetch full profile details from the database
   let user = null;
   try {
-    const users = await query("SELECT id, full_name, email, role FROM profiles WHERE id = ? LIMIT 1", [userId]);
+    const users = await query("SELECT id, full_name, email, role FROM users WHERE id = ? LIMIT 1", [userId]);
     user = users[0];
   } catch (error) {
     console.error("Failed to query user profile in dashboard layout:", error);

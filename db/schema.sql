@@ -9,7 +9,9 @@
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
+SET FOREIGN_KEY_CHECKS = 0;
 SET time_zone = "+00:00";
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -147,8 +149,10 @@ CREATE TABLE `syllabi` (
 
 CREATE TABLE `users` (
   `id` varchar(36) NOT NULL,
+  `full_name` varchar(255) DEFAULT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) DEFAULT NULL,
+  `role` enum('admin','instructor','student') NOT NULL DEFAULT 'student',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -273,6 +277,7 @@ ALTER TABLE `syllabi`
 ALTER TABLE `weekly_plans`
   ADD CONSTRAINT `weekly_plans_ibfk_1` FOREIGN KEY (`syllabus_id`) REFERENCES `syllabi` (`id`) ON DELETE CASCADE;
 
+SET FOREIGN_KEY_CHECKS = 1;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

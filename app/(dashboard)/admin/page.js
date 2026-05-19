@@ -7,8 +7,8 @@ import { Users, FileText, CheckSquare, Layers } from "lucide-react";
 
 async function getAdminStats() {
   try {
-    const [instructors] = await query("SELECT COUNT(*) as count FROM profiles WHERE role = 'instructor'");
-    const [students] = await query("SELECT COUNT(*) as count FROM profiles WHERE role = 'student'");
+    const [instructors] = await query("SELECT COUNT(*) as count FROM users WHERE role = 'instructor'");
+    const [students] = await query("SELECT COUNT(*) as count FROM users WHERE role = 'student'");
     const [approved] = await query("SELECT COUNT(*) as count FROM syllabi WHERE status = 'approved'");
     const [pending] = await query("SELECT COUNT(*) as count FROM syllabi WHERE status = 'submitted'");
     return {

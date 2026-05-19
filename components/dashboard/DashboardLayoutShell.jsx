@@ -74,6 +74,10 @@ export function DashboardLayoutShell({ user, children }) {
     { label: "Syllabi", href: `/${role}/syllabi`, icon: FileText },
   ];
 
+  if (role === "student") {
+    navItems.push({ label: "Curriculum", href: "/student/curriculum", icon: BookOpen });
+  }
+
   if (role === "admin") {
     navItems.push(
       { label: "User Management", href: "/admin/users", icon: Users },

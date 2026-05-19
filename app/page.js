@@ -10,7 +10,7 @@ export default function Home() {
     try {
       // Trigger seed to ensure default profiles exist
       await fetch("/api/seed", { method: "POST" });
-      
+
       const roleProfiles = {
         admin: { id: "a1a1a1a1-1111-4111-a111-111111111111", email: "admin@pup.edu.ph", name: "Dr. Danilo T. dela Cruz" },
         instructor: { id: "i2i2i2i2-2222-4222-i222-222222222222", email: "instructor@pup.edu.ph", name: "Prof. Maria Elizabeth C. Santos" },
@@ -24,7 +24,7 @@ export default function Home() {
         document.cookie = `session_email=${user.email}; path=/; max-age=3600`;
         document.cookie = `session_name=${encodeURIComponent(user.name)}; path=/; max-age=3600`;
       }
-      
+
       window.location.href = `/${role}`;
     } catch (e) {
       console.error("Login failed", e);
@@ -37,14 +37,14 @@ export default function Home() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const emailInput = document.getElementById("email").value.trim().toLowerCase();
-    
+
     let role = "student";
     if (emailInput.includes("admin")) {
       role = "admin";
     } else if (emailInput.includes("instructor")) {
       role = "instructor";
     }
-    
+
     await handleQuickLogin(role);
   };
 

@@ -367,8 +367,7 @@ export function SyllabusEditor({ syllabusId = null }) {
         <div className="absolute right-0 top-0 w-16 h-16 bg-[#800000]/5 rounded-full blur-xl" />
         <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
           <div className="space-y-1 max-w-xl">
-            <h4 className="text-sm font-black text-gray-800 uppercase tracking-widest flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500" />
+            <h4 className="text-sm font-black text-gray-800 uppercase tracking-widest">
               <span>Smart OCR Syllabus Import</span>
             </h4>
             <p className="text-xs text-gray-500 leading-relaxed font-medium">

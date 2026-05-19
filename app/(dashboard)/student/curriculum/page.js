@@ -1,16 +1,107 @@
 "use client";
 
-import { useState } from "react";
-import { BookOpen, Printer, CheckCircle, HelpCircle, Layers, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { 
+  BookOpen, 
+  Printer, 
+  Download, 
+  FileText, 
+  Clock, 
+  CheckCircle,
+  HelpCircle,
+  AlertTriangle 
+} from "lucide-react";
 
 export default function CurriculumPage() {
-  const [activeYear, setActiveYear] = useState("all");
+  const [departments, setDepartments] = useState([]);
+  const [customCurricula, setCustomCurricula] = useState({});
+  const [selectedDept, setSelectedDept] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  // Dynamic TXT reading state
+  const [textContents, setTextContents] = useState("");
+  const [loadingText, setLoadingText] = useState(false);
+
+  const fetchMetadata = async () => {
+    try {
+      // 1. Fetch all academic departments
+      const deptRes = await fetch("/api/departments");
+      const deptData = await deptRes.json();
+      const depts = deptData.departments || [];
+      setDepartments(depts);
+
+      // Default selected department to Bachelor of Science in Information Technology (BSIT)
+      const bsitDept = depts.find(d => d.name.includes("Information Technology"));
+      if (bsitDept) {
+        setSelectedDept(bsitDept.id);
+      } else if (depts.length > 0) {
+        setSelectedDept(depts[0].id);
+      }
+
+      // 2. Fetch all custom uploaded curricula files
+      const currRes = await fetch("/api/curriculum");
+      const currData = await currRes.json();
+      const curriculaMap = {};
+      currData.curricula?.forEach(c => {
+        curriculaMap[c.department_id] = c;
+      });
+      setCustomCurricula(curriculaMap);
+    } catch (error) {
+      console.error("Failed to load student curriculum sheet:", error);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMetadata();
+  }, []);
+
+  const selectedDepartmentObject = departments.find(d => d.id === selectedDept);
+  const activeCustomCurriculum = customCurricula[selectedDept];
+  const isBSITSelected = selectedDepartmentObject?.name?.includes("Information Technology");
+
+  const fileUrl = activeCustomCurriculum ? getCustomUrl(selectedDept, activeCustomCurriculum.file_name) : "";
+  const ext = activeCustomCurriculum ? activeCustomCurriculum.file_name.split('.').pop().toLowerCase() : "";
+
+  // Dynamic text reader for custom TXT curriculum files
+  useEffect(() => {
+    if (activeCustomCurriculum) {
+      const ext = activeCustomCurriculum.file_name.split('.').pop().toLowerCase();
+      if (ext === "txt") {
+        setLoadingText(true);
+        setTextContents("");
+        const fileUrl = getCustomUrl(selectedDept, activeCustomCurriculum.file_name);
+        fetch(fileUrl)
+          .then(res => res.text())
+          .then(text => {
+            setTextContents(text);
+            setLoadingText(false);
+          })
+          .catch(err => {
+            console.error(err);
+            setTextContents("Failed to parse text document contents.");
+            setLoadingText(false);
+          });
+      }
+    }
+  }, [selectedDept, activeCustomCurriculum]);
 
   const handlePrint = () => {
     window.print();
   };
 
-  // Data structure for Curriculum semesters
+  function formatDate(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function getCustomUrl(deptId, fileName) {
+    const safeFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    return `/uploads/curricula/${deptId}_${safeFileName}`;
+  }
+
+  // Static BSIT Curriculum Data
   const firstYear1stSem = [
     { code: "GEED 032", title: "Filipinolohiya at Pambansang Kaunlaran", lec: 3, lab: 0, units: 3, prereq: "None" },
     { code: "GEED 005", title: "Purposive Communication", lec: 3, lab: 0, units: 3, prereq: "None" },
@@ -95,24 +186,24 @@ export default function CurriculumPage() {
   ];
 
   const freeElectiveOptions = [
-    { code: "OFAD 012", title: "Personal and Professional Development", lec: 3, lab: 0, units: 3, prereq: "None" },
-    { code: "JAPA 101", title: "Japanese 1", lec: 3, lab: 0, units: 3, prereq: "None" },
-    { code: "SPAN 101", title: "Spanish 1", lec: 3, lab: 0, units: 3, prereq: "None" },
-    { code: "COMP 011", title: "Technical Documentation and Presentation Skills in ICT", lec: 3, lab: 0, units: 3, prereq: "None" },
-    { code: "COMP 047", title: "E-Commerce", lec: 3, lab: 0, units: 3, prereq: "None" },
-    { code: "MATH 018", title: "Linear Algebra with Simulation Software", lec: 3, lab: 0, units: 3, prereq: "None" },
-    { code: "STAT 013", title: "Inferential Statistics", lec: 3, lab: 0, units: 3, prereq: "None" }
+    { code: "OFAD 012", title: "Personal and Professional Development", lec: 3, lab: 0, units: 3 },
+    { code: "JAPA 101", title: "Japanese 1", lec: 3, lab: 0, units: 3 },
+    { code: "SPAN 101", title: "Spanish 1", lec: 3, lab: 0, units: 3 },
+    { code: "COMP 011", title: "Technical Documentation and Presentation Skills in ICT", lec: 3, lab: 0, units: 3 },
+    { code: "COMP 047", title: "E-Commerce", lec: 3, lab: 0, units: 3 },
+    { code: "MATH 018", title: "Linear Algebra with Simulation Software", lec: 3, lab: 0, units: 3 },
+    { code: "STAT 013", title: "Inferential Statistics", lec: 3, lab: 0, units: 3 }
   ];
 
   const regularElectiveOptions = [
-    { code: "INTE 351", title: "Systems Analysis and Design", lec: 2, lab: 3, units: 3, prereq: "None" },
-    { code: "INTE 352", title: "Systems Testing and Automation", lec: 2, lab: 3, units: 3, prereq: "None" },
-    { code: "INTE 361", title: "Advanced Computing Techniques", lec: 2, lab: 3, units: 3, prereq: "None" },
-    { code: "INTE 362", title: "Quality Assurance", lec: 2, lab: 3, units: 3, prereq: "None" },
-    { code: "INTE 371", title: "Web Systems and Technologies", lec: 2, lab: 3, units: 3, prereq: "None" },
-    { code: "INTE 372", title: "IT Audit and Controls", lec: 2, lab: 3, units: 3, prereq: "None" },
-    { code: "INTE 481", title: "Event Driven Programming", lec: 2, lab: 3, units: 3, prereq: "None" },
-    { code: "INTE 482", title: ".NET Fundamentals", lec: 2, lab: 3, units: 3, prereq: "None" }
+    { code: "INTE 351", title: "Systems Analysis and Design", lec: 2, lab: 3, units: 3 },
+    { code: "INTE 352", title: "Systems Testing and Automation", lec: 2, lab: 3, units: 3 },
+    { code: "INTE 361", title: "Advanced Computing Techniques", lec: 2, lab: 3, units: 3 },
+    { code: "INTE 362", title: "Quality Assurance", lec: 2, lab: 3, units: 3 },
+    { code: "INTE 371", title: "Web Systems and Technologies", lec: 2, lab: 3, units: 3 },
+    { code: "INTE 372", title: "IT Audit and Controls", lec: 2, lab: 3, units: 3 },
+    { code: "INTE 481", title: "Event Driven Programming", lec: 2, lab: 3, units: 3 },
+    { code: "INTE 482", title: ".NET Fundamentals", lec: 2, lab: 3, units: 3 }
   ];
 
   const commonElectiveOptions = [
@@ -140,7 +231,6 @@ export default function CurriculumPage() {
     { code: "COMP 041", title: "Cloud and Virtualization Security", lec: 2, lab: 3, units: 3 }
   ];
 
-  // Semester Total calculator helper
   const renderSemesterTable = (semesterName, coursesList) => {
     const totalLec = coursesList.reduce((sum, c) => sum + c.lec, 0);
     const totalLab = coursesList.reduce((sum, c) => sum + c.lab, 0);
@@ -174,7 +264,6 @@ export default function CurriculumPage() {
                   <td className="px-3 py-2 text-center text-[10px] text-gray-400 font-semibold print:text-black italic">{course.prereq || "—"}</td>
                 </tr>
               ))}
-              {/* Semester Totals */}
               <tr className="bg-gray-50/70 border-t-2 border-gray-300 font-bold text-gray-900 print:bg-transparent print:border-black">
                 <td colSpan={2} className="px-3 py-2 text-right border-r border-gray-300 uppercase tracking-wider print:border-black print:text-black">Semester Totals:</td>
                 <td className="px-2 py-2 border-r border-gray-300 text-center print:border-black print:text-black">{totalLec}</td>
@@ -189,78 +278,187 @@ export default function CurriculumPage() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="py-20 text-center flex flex-col items-center justify-center gap-3 bg-white rounded-3xl border border-gray-100 shadow-sm">
+        <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-semibold text-gray-500">Initializing Curriculum workspace...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Action Header bar - Hides during physical print */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 print:hidden">
+    <div className="space-y-6 animate-in fade-in duration-300">
+      
+      {/* Dynamic Header & Switcher */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-red-50 text-[#800000] rounded-full">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Curriculum Sheet Catalog</h3>
-            <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Polytechnic University of the Philippines</p>
+            <h3 className="text-lg font-bold text-gray-900">Academic Curriculum Sheet</h3>
+            <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Official Program Directories</p>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={handlePrint}
-            className="px-4 py-2.5 bg-[#800000] hover:bg-red-900 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-red-800/10 flex items-center gap-1.5"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Download / Print Sheet</span>
-          </button>
+        {/* Dynamic Selector */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch sm:items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Program:</span>
+            <select
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/10 bg-white"
+            >
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name.match(/\(([^)]+)\)/)?.[1] || dept.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {!activeCustomCurriculum && isBSITSelected && (
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-[#800000] hover:bg-red-900 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-red-800/10 flex items-center justify-center gap-1.5"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Print Catalog</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Tabs Filter - Hides during print */}
-      <div className="flex flex-wrap gap-1.5 print:hidden">
-        {[
-          { id: "all", label: "Full Curriculum" },
-          { id: "1", label: "First Year" },
-          { id: "2", label: "Second Year" },
-          { id: "3", label: "Third Year" },
-          { id: "4", label: "Fourth Year" },
-          { id: "electives", label: "Electives Library" }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveYear(tab.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeYear === tab.id
-                ? "bg-[#800000] text-white shadow-sm"
-                : "bg-white border border-gray-200 hover:bg-gray-50 text-gray-600"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* --- SCENARIO A: Active Custom Curriculum Uploaded (WITH IMMEDIATE EMBEDDED VIEWER) --- */}
+      {activeCustomCurriculum ? (
+        <div className="space-y-6">
+          
+          {/* Top Interactive Download Bar */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-green-50 text-green-600 rounded-xl">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm text-gray-900 leading-tight">Official Curriculum Document</h4>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[10px] font-semibold text-gray-400">
+                  <span className="text-[#800000] font-bold">{selectedDepartmentObject?.name}</span>
+                  <span>•</span>
+                  <span className="text-gray-500 font-bold">{activeCustomCurriculum.file_name}</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Uploaded {formatDate(activeCustomCurriculum.uploaded_at)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-      {/* Official Curriculum Sheet Template - Look exactly like standard University Document */}
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-md p-6 lg:p-10 space-y-8 print:p-0 print:border-none print:shadow-none">
+            {/* Action Button: Download */}
+            <a 
+              href={fileUrl}
+              download
+              className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download Curriculum</span>
+            </a>
+          </div>
+
+          {/* --- CORE EMBEDDED VIEWER PANEL ("Kita Agad yung New Thing") --- */}
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-md overflow-hidden flex flex-col">
+            <div className="px-6 py-3.5 bg-gray-50/50 border-b border-gray-200 flex justify-between items-center text-xs font-bold text-gray-800">
+              <span className="uppercase tracking-widest text-[10px] text-[#800000]">Document Viewer</span>
+              <span>Active Sheet Preview</span>
+            </div>
+            
+            <div className="p-4 bg-gray-50 flex flex-col justify-center min-h-[500px]">
+              {(() => {
+                if (ext === "pdf") {
+                  return (
+                    <iframe 
+                      src={fileUrl} 
+                      className="w-full h-[750px] rounded-2xl border border-gray-200 bg-white shadow-sm"
+                      title="Student Curriculum Viewer"
+                    />
+                  );
+                }
+
+                if (ext === "txt") {
+                  return (
+                    <div className="w-full min-h-[600px] bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col">
+                      {loadingText ? (
+                        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                          <div className="w-8 h-8 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
+                          <span className="text-xs text-gray-500 font-semibold">Parsing document contents...</span>
+                        </div>
+                      ) : (
+                        <pre className="flex-1 p-6 bg-gray-50 rounded-xl border border-gray-100 text-xs font-mono whitespace-pre-wrap overflow-y-auto text-gray-800 text-left leading-relaxed">
+                          {textContents}
+                        </pre>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Word document viewer embed
+                const googleViewUrl = `https://docs.google.com/gview?url=${encodeURIComponent(window.location.origin + fileUrl)}&embedded=true`;
+                return (
+                  <div className="w-full h-[650px] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+                    <div className="p-3 bg-amber-50 border-b border-amber-100 text-center text-[10px] font-bold text-amber-800 flex items-center justify-center gap-2">
+                      <HelpCircle className="w-4 h-4" />
+                      <span>Office document viewer active. Scroll to review the curriculum structure.</span>
+                    </div>
+                    <iframe 
+                      src={googleViewUrl} 
+                      className="flex-1 w-full border-none"
+                      title="Office Document Preview"
+                    />
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Bottom auxiliary print bar */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-between items-center text-[10px] text-gray-400 font-semibold">
+              <span>Official Branch Registry Sheet</span>
+              <a 
+                href={fileUrl}
+                download
+                className="font-extrabold text-green-600 hover:text-green-800 hover:underline flex items-center gap-1"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Curriculum File ({ext.toUpperCase()})</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+      ) : isBSITSelected ? (
         
-        {/* Document Official University Header */}
-        <div className="text-center border-b border-gray-300 pb-6 space-y-2 print:pb-4">
-          <span className="text-xs font-black uppercase tracking-widest text-[#800000] block print:text-black">Curriculum Sheet</span>
-          <h2 className="text-sm font-bold text-gray-800 print:text-black">2022 Approved Revised Curriculum</h2>
-          <span className="text-[10px] font-bold text-gray-400 block tracking-wide uppercase print:text-black">
-            BOR Resolution No 2825; 30-September 2022
-          </span>
-          <div className="text-gray-500 font-semibold text-[10px] uppercase leading-relaxed print:text-black">
-            <p>Republic of the Philippines</p>
-            <p className="font-extrabold text-gray-700">Polytechnic University of the Philippines</p>
-            <p>Office of the Vice President for Academic Affairs</p>
-            <p className="tracking-widest">Quality Assurance Center</p>
+        // --- SCENARIO B: fallback to high-fidelity BSIT dynamic grid if no custom upload exists ---
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-md p-6 lg:p-10 space-y-8 print:p-0 print:border-none print:shadow-none">
+          
+          <div className="text-center border-b border-gray-300 pb-6 space-y-2 print:pb-4">
+            <span className="text-xs font-black uppercase tracking-widest text-[#800000] block print:text-black">Curriculum Catalog</span>
+            <h2 className="text-sm font-bold text-gray-800 print:text-black">2022 Approved Revised Curriculum</h2>
+            <span className="text-[10px] font-bold text-gray-400 block tracking-wide uppercase print:text-black">
+              BOR Resolution No 2825; 30-September 2022
+            </span>
+            <div className="text-gray-500 font-semibold text-[10px] uppercase leading-relaxed print:text-black">
+              <p>Republic of the Philippines</p>
+              <p className="font-extrabold text-gray-700">Polytechnic University of the Philippines</p>
+              <p>Office of the Vice President for Academic Affairs</p>
+              <p className="tracking-widest">Quality Assurance Center</p>
+            </div>
+            <h3 className="text-base font-black text-gray-900 border-t border-b border-gray-300 py-2.5 my-2 uppercase tracking-wide print:text-black">
+              Bachelor of Science in Information Technology (BSIT) 2022 - 2023
+            </h3>
           </div>
-          <h3 className="text-base font-black text-gray-900 border-t border-b border-gray-300 py-2.5 my-2 uppercase tracking-wide print:text-black">
-            Bachelor of Science in Information Technology (BSIT) 2022 - 2023
-          </h3>
-        </div>
 
-        {/* --- FIRST YEAR --- */}
-        {(activeYear === "all" || activeYear === "1") && (
+          {/* First Year */}
           <div className="space-y-6">
             <h4 className="text-xs font-black uppercase tracking-widest text-red-900 bg-red-50/50 border-l-4 border-[#800000] pl-2.5 py-1 print:text-black print:bg-transparent print:border-black">
               First Year Curriculum
@@ -270,10 +468,8 @@ export default function CurriculumPage() {
               {renderSemesterTable("FIRST YEAR – 2nd Semester", firstYear2ndSem)}
             </div>
           </div>
-        )}
 
-        {/* --- SECOND YEAR --- */}
-        {(activeYear === "all" || activeYear === "2") && (
+          {/* Second Year */}
           <div className="space-y-6">
             <h4 className="text-xs font-black uppercase tracking-widest text-red-900 bg-red-50/50 border-l-4 border-[#800000] pl-2.5 py-1 print:text-black print:bg-transparent print:border-black">
               Second Year Curriculum
@@ -283,10 +479,8 @@ export default function CurriculumPage() {
               {renderSemesterTable("SECOND YEAR – 2nd Semester", secondYear2ndSem)}
             </div>
           </div>
-        )}
 
-        {/* --- THIRD YEAR --- */}
-        {(activeYear === "all" || activeYear === "3") && (
+          {/* Third Year */}
           <div className="space-y-6">
             <h4 className="text-xs font-black uppercase tracking-widest text-red-900 bg-red-50/50 border-l-4 border-[#800000] pl-2.5 py-1 print:text-black print:bg-transparent print:border-black">
               Third Year Curriculum
@@ -301,10 +495,8 @@ export default function CurriculumPage() {
               {renderSemesterTable("THIRD YEAR – Summer Term", thirdYearSummer)}
             </div>
           </div>
-        )}
 
-        {/* --- FOURTH YEAR --- */}
-        {(activeYear === "all" || activeYear === "4") && (
+          {/* Fourth Year */}
           <div className="space-y-6">
             <h4 className="text-xs font-black uppercase tracking-widest text-red-900 bg-red-50/50 border-l-4 border-[#800000] pl-2.5 py-1 print:text-black print:bg-transparent print:border-black">
               Fourth Year Curriculum
@@ -314,17 +506,14 @@ export default function CurriculumPage() {
               {renderSemesterTable("FOURTH YEAR – 2nd Semester", fourthYear2ndSem)}
             </div>
           </div>
-        )}
 
-        {/* --- ELECTIVES DIRECTORY --- */}
-        {(activeYear === "all" || activeYear === "electives") && (
+          {/* Electives directory */}
           <div className="space-y-8 pt-4 border-t border-gray-300">
             <h4 className="text-xs font-black uppercase tracking-widest text-red-900 bg-red-50/50 border-l-4 border-[#800000] pl-2.5 py-1 print:text-black print:bg-transparent print:border-black">
               Elective Course Libraries
             </h4>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Option A: Free Electives */}
               <div className="border border-gray-300 rounded-2xl overflow-hidden shadow-sm bg-white">
                 <div className="bg-gray-100 border-b border-gray-300 px-4 py-2.5">
                   <h5 className="font-extrabold text-xs text-gray-800 uppercase tracking-wider">OPTIONS FOR FREE ELECTIVES</h5>
@@ -349,7 +538,6 @@ export default function CurriculumPage() {
                 </table>
               </div>
 
-              {/* Option B: IT Electives */}
               <div className="border border-gray-300 rounded-2xl overflow-hidden shadow-sm bg-white">
                 <div className="bg-gray-100 border-b border-gray-300 px-4 py-2.5">
                   <h5 className="font-extrabold text-xs text-gray-800 uppercase tracking-wider">OPTIONS FOR BSIT SPECIALIZATION ELECTIVES</h5>
@@ -375,7 +563,6 @@ export default function CurriculumPage() {
               </div>
             </div>
 
-            {/* Option C: Common Electives */}
             <div className="border border-gray-300 rounded-2xl overflow-hidden shadow-sm bg-white">
               <div className="bg-gray-100 border-b border-gray-300 px-4 py-2.5">
                 <h5 className="font-extrabold text-xs text-gray-800 uppercase tracking-wider">OTHER ELECTIVE COURSES (Common to BSIT and BSCS Programs)</h5>
@@ -389,7 +576,7 @@ export default function CurriculumPage() {
                       <th className="px-3 py-2 text-center w-14">Units</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 grid-cols-2">
+                  <tbody className="divide-y divide-gray-200">
                     {commonElectiveOptions.map((e, idx) => (
                       <tr key={idx} className="hover:bg-gray-50/30">
                         <td className="px-3 py-2 font-bold text-gray-900 border-r border-gray-300">{e.code}</td>
@@ -402,14 +589,35 @@ export default function CurriculumPage() {
               </div>
             </div>
           </div>
-        )}
 
-        {/* Document Footer seal/disclaimer */}
-        <div className="border-t border-gray-300 pt-6 text-[10px] text-gray-400 font-semibold flex flex-col sm:flex-row justify-between items-center gap-2 print:pt-4">
-          <span>Official Syllabus Registry & Academic Portal • PUP San Juan Branch</span>
-          <span>Approved: Academic Year 2022 - 2023 • Page 1 of 1</span>
+          <div className="border-t border-gray-300 pt-6 text-[10px] text-gray-400 font-semibold flex flex-col sm:flex-row justify-between items-center gap-2 print:pt-4">
+            <span>Official Syllabus Registry & Academic Portal • PUP San Juan Branch</span>
+            <span>Approved: Academic Year 2022 - 2023 • Page 1 of 1</span>
+          </div>
         </div>
-      </div>
+      ) : (
+        
+        // --- SCENARIO C: placeholder fallback for other 7 programs with no custom upload ---
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-md p-8 text-center space-y-6 max-w-xl mx-auto py-12">
+          <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-100 shadow-inner">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          
+          <div className="space-y-2">
+            <h4 className="text-lg font-black text-gray-900 leading-tight">Curriculum Pending Upload</h4>
+            <p className="text-xs text-gray-500 font-medium leading-relaxed">
+              No official customized curriculum document has been uploaded by the administration for this program yet:
+            </p>
+            <span className="inline-block mt-2 px-3 py-1.5 bg-amber-50 text-amber-800 font-black text-xs rounded-xl border border-amber-100">
+              {selectedDepartmentObject?.name}
+            </span>
+          </div>
+
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-semibold text-gray-400 leading-relaxed max-w-sm mx-auto">
+            Please contact your Department Chairperson or academic head to upload the official revised curriculum document.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

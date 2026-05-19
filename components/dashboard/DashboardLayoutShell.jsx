@@ -81,8 +81,7 @@ export function DashboardLayoutShell({ user, children }) {
   if (role === "admin") {
     navItems.push(
       { label: "User Management", href: "/admin/users", icon: Users },
-      { label: "Departments", href: "#", icon: Layers, badge: "CCIS/COE" },
-      { label: "Courses", href: "#", icon: BookOpen }
+      { label: "Curriculum", href: "/admin/curriculum", icon: BookOpen }
     );
   }
 

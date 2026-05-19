@@ -232,7 +232,7 @@ export default function AdminCurriculumPage() {
               {/* Program Header */}
               <div className="p-6 border-b border-gray-50 space-y-3 bg-gradient-to-br from-white to-gray-50/30">
                 <div className="flex justify-between items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-red-50 text-[#800000] font-bold text-xs flex items-center justify-center shadow-inner border border-red-100 flex-shrink-0">
+                  <div className="px-3 min-w-[2.5rem] h-10 rounded-xl bg-red-50 text-[#800000] font-bold text-xs flex items-center justify-center shadow-inner border border-red-100 flex-shrink-0">
                     {dept.name.match(/\(([^)]+)\)/)?.[1] || "DEPT"}
                   </div>
                   

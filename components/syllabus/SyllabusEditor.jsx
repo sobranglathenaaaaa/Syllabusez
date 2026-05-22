@@ -81,9 +81,42 @@ export function SyllabusEditor({ syllabusId = null }) {
   const [courseOutcomes, setCourseOutcomes] = useState([
     { id: "CLO-1", description: "Formulate correct algorithms using sequential, selection, and iterative control structures.", alignments: ["PLO-1"] }
   ]);
+  // Added Campus Goals state
+  const [campusGoals, setCampusGoals] = useState([]);
+
+  // Performance Indicators state
   const [performanceIndicators, setPerformanceIndicators] = useState([
     { id: "PI-1", description: "Construct correct flowcharts and pseudocode to solve mathematical and business problems.", alignments: ["CLO-1"] }
   ]);
+
+  // ILO and Campus Goals handlers
+  const addILO = () => {
+    setInstitutionalOutcomes([...institutionalOutcomes, ""]);
+  };
+  const removeILO = (index) => {
+    const list = [...institutionalOutcomes];
+    list.splice(index, 1);
+    setInstitutionalOutcomes(list);
+  };
+  const updateILO = (index, value) => {
+    const list = [...institutionalOutcomes];
+    list[index] = value;
+    setInstitutionalOutcomes(list);
+  };
+
+  const addCampusGoal = () => {
+    setCampusGoals([...campusGoals, ""]);
+  };
+  const removeCampusGoal = (index) => {
+    const list = [...campusGoals];
+    list.splice(index, 1);
+    setCampusGoals(list);
+  };
+  const updateCampusGoal = (index, value) => {
+    const list = [...campusGoals];
+    list[index] = value;
+    setCampusGoals(list);
+  };
 
   // SECTION D: Weekly Plan Builder State
   const [weeklyPlans, setWeeklyPlans] = useState([
@@ -108,8 +141,8 @@ export function SyllabusEditor({ syllabusId = null }) {
   ]);
 
   const totalGradingPercentage = gradingComponents.reduce((sum, item) => sum + item.percentage, 0);
-const isGradingValid = totalGradingPercentage === 100;
-  
+  const isGradingValid = totalGradingPercentage === 100;
+
 
   // OCR Auto-fill state
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -392,7 +425,7 @@ const isGradingValid = totalGradingPercentage === 100;
 
       const text = result.data.text;
       setOcrStatusText("Parsing text structures and segments...");
-      
+
       const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
       let parsedOutcomes = [];
@@ -427,7 +460,7 @@ const isGradingValid = totalGradingPercentage === 100;
         if (weekMatch) {
           const weekNum = parseInt(weekMatch[1]);
           const topicCandidate = line.replace(weekMatch[0], "").replace(/^[:\-,\s]+/, "").trim();
-          const topic = topicCandidate.length > 5 ? topicCandidate : (lines[i+1] || "");
+          const topic = topicCandidate.length > 5 ? topicCandidate : (lines[i + 1] || "");
 
           parsedWeeks.push({
             week: weekNum,
@@ -463,7 +496,7 @@ const isGradingValid = totalGradingPercentage === 100;
       }
 
       if (parsedWeeks.length > 0) {
-        parsedWeeks.sort((a,b) => a.week - b.week);
+        parsedWeeks.sort((a, b) => a.week - b.week);
         const mappedWeeks = parsedWeeks.map((item, idx) => ({ ...item, week: idx + 1 }));
         setWeeklyPlans(mappedWeeks);
       }
@@ -603,21 +636,19 @@ const isGradingValid = totalGradingPercentage === 100;
               <button
                 key={sec.key}
                 onClick={() => setActiveSection(sec.key)}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 group text-left ${
-                  isActive
-                    ? "bg-[#800000]/5 text-[#800000] font-bold border-l-4 border-[#800000]"
-                    : "text-gray-600 hover:bg-gray-50 font-medium"
-                }`}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 group text-left ${isActive
+                  ? "bg-[#800000]/5 text-[#800000] font-bold border-l-4 border-[#800000]"
+                  : "text-gray-600 hover:bg-gray-50 font-medium"
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <IconComponent
-                    className={`w-4.5 h-4.5 transition-transform group-hover:scale-110 ${
-                      isActive ? "text-[#800000]" : "text-gray-400 group-hover:text-gray-600"
-                    }`}
+                    className={`w-4.5 h-4.5 transition-transform group-hover:scale-110 ${isActive ? "text-[#800000]" : "text-gray-400 group-hover:text-gray-600"
+                      }`}
                   />
                   <span className="text-xs">{sec.name}</span>
                 </div>
-                
+
                 {/* Micro circular/check indicator */}
                 {progress === 100 ? (
                   <Check className="w-4 h-4 text-green-500 bg-green-50 rounded-full p-0.5" />
@@ -648,7 +679,7 @@ const isGradingValid = totalGradingPercentage === 100;
 
       {/* 2. Main Editable Canvas Area */}
       <main className="flex-1 w-full bg-white rounded-3xl border border-gray-100 p-6 sm:p-8 shadow-sm min-h-[50vh] transition-all duration-300">
-        
+
         {/* Section A: Course Information */}
         {activeSection === "A" && (
           <div className="space-y-6">
@@ -846,36 +877,69 @@ const isGradingValid = totalGradingPercentage === 100;
                   <span className="w-1.5 h-3 bg-gray-500 rounded-sm" />
                   <span>Institutional Learning Outcomes (ILOs)</span>
                 </h4>
-                
+
                 <div className="space-y-2.5">
-                  {institutionalOutcomes.map((ilo, idx) => (
-                    <div key={idx} className="flex gap-2 items-center">
-                      <span className="font-extrabold text-gray-400 text-[10px] w-5 text-center">{idx + 1}.</span>
-                      <input
-                        type="text"
-                        value={ilo}
-                        onChange={(e) => {
-                          const list = [...institutionalOutcomes];
-                          list[idx] = e.target.value;
-                          setInstitutionalOutcomes(list);
-                        }}
-                        className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 focus:border-[#800000] focus:outline-none bg-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const list = [...institutionalOutcomes];
-                          list.splice(idx, 1);
-                          setInstitutionalOutcomes(list);
-                        }}
-                        className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
+
+                  {/* Institutional Learning Outcomes (ILO) Section */}
+                  <div className="grid grid-cols-2 gap-4 mb-6 border border-gray-200 rounded-xl overflow-hidden">
+                    {/* Header Column */}
+                    <div className="bg-gray-100 flex items-center justify-center p-4">
+                      <h4 className="text-sm font-bold uppercase text-gray-700 tracking-wider">
+                        Institutional Learning Outcomes (ILO)
+                      </h4>
+                    </div>
+                    {/* Content Column */}
+                    <div className="p-4 space-y-3">
+                      {institutionalOutcomes.map((ilo, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="font-bold text-gray-600 w-5 text-right">{idx + 1}.</span>
+                          <input
+                            type="text"
+                            value={ilo}
+                            onChange={(e) => updateILO(idx, e.target.value)}
+                            placeholder="Institutional outcome description"
+                            className="flex-1 border-b border-gray-300 text-sm focus:border-[#800000] focus:outline-none"
+                          />
+                          <button type="button" onClick={() => removeILO(idx)} className="p-1 text-gray-400 hover:text-red-600">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={addILO} className="mt-2 text-xs text-[#800000] hover:underline">
+                        + Add ILO
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
 
+                  {/* Campus Goals Section */}
+                  <div className="grid grid-cols-2 gap-4 border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gray-100 flex items-center justify-center p-4">
+                      <h4 className="text-sm font-bold uppercase text-gray-700 tracking-wider">Campus Goals</h4>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {campusGoals.map((goal, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="font-bold text-gray-600 w-5 text-right">{idx + 1}.</span>
+
+                          <input
+                            type="text"
+                            value={goal}
+                            onChange={(e) => updateCampusGoal(idx, e.target.value)}
+                            placeholder="Campus goal description"
+                            className="flex-1 border-b border-gray-300 text-sm focus:border-[#800000] focus:outline-none"
+                          />
+                          <button type="button" onClick={() => removeCampusGoal(idx)} className="p-1 text-gray-400 hover:text-red-600">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={addCampusGoal} className="mt-2 text-xs text-[#800000] hover:underline">
+                        + Add Campus Goal
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                )
                 <button
                   type="button"
                   onClick={() => setInstitutionalOutcomes([...institutionalOutcomes, "New Learning Outcome"])}
@@ -944,16 +1008,15 @@ const isGradingValid = totalGradingPercentage === 100;
                                 key={ilo}
                                 onClick={() => {
                                   const current = plo.alignments || [];
-                                  const updated = isAligned 
+                                  const updated = isAligned
                                     ? current.filter(x => x !== ilo)
                                     : [...current, ilo];
                                   updatePLO(idx, "alignments", updated);
                                 }}
-                                className={`px-2 py-1 text-[9px] font-bold rounded-lg border transition-all ${
-                                  isAligned
-                                    ? "bg-amber-600 border-amber-600 text-white shadow-sm"
-                                    : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                                }`}
+                                className={`px-2 py-1 text-[9px] font-bold rounded-lg border transition-all ${isAligned
+                                  ? "bg-amber-600 border-amber-600 text-white shadow-sm"
+                                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                                  }`}
                               >
                                 {ilo}
                               </button>
@@ -1034,11 +1097,10 @@ const isGradingValid = totalGradingPercentage === 100;
                                     : [...current, plo.id];
                                   updateCLO(idx, "alignments", updated);
                                 }}
-                                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${
-                                  isAligned
-                                    ? "bg-[#800000] border-[#800000] text-white shadow-sm"
-                                    : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                                }`}
+                                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${isAligned
+                                  ? "bg-[#800000] border-[#800000] text-white shadow-sm"
+                                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                                  }`}
                               >
                                 {plo.id}
                               </button>
@@ -1119,11 +1181,10 @@ const isGradingValid = totalGradingPercentage === 100;
                                     : [...current, clo.id];
                                   updatePI(idx, "alignments", updated);
                                 }}
-                                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${
-                                  isAligned
-                                    ? "bg-amber-700 border-amber-700 text-white shadow-sm"
-                                    : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                                }`}
+                                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${isAligned
+                                  ? "bg-amber-700 border-amber-700 text-white shadow-sm"
+                                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                                  }`}
                               >
                                 {clo.id}
                               </button>
@@ -1192,11 +1253,10 @@ const isGradingValid = totalGradingPercentage === 100;
                         {/* Standard collapsed row */}
                         <tr key={idx} className="hover:bg-gray-50/40 transition-colors">
                           <td className="py-3.5 px-4 text-center">
-                            <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg ${
-                              idx % 2 === 0
-                                ? "bg-[#800000]/10 text-[#800000]"
-                                : "bg-amber-600/10 text-amber-700"
-                            }`}>
+                            <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg ${idx % 2 === 0
+                              ? "bg-[#800000]/10 text-[#800000]"
+                              : "bg-amber-600/10 text-amber-700"
+                              }`}>
                               WEEK {plan.week}
                             </span>
                           </td>
@@ -1227,11 +1287,10 @@ const isGradingValid = totalGradingPercentage === 100;
                               <button
                                 type="button"
                                 onClick={() => toggleWeekExpand(idx)}
-                                className={`px-2 py-1 border rounded-lg text-[9px] font-bold transition-all ${
-                                  plan.expanded
-                                    ? "bg-gray-100 text-gray-800"
-                                    : "bg-[#800000]/5 text-[#800000] border-[#800000]/10"
-                                }`}
+                                className={`px-2 py-1 border rounded-lg text-[9px] font-bold transition-all ${plan.expanded
+                                  ? "bg-gray-100 text-gray-800"
+                                  : "bg-[#800000]/5 text-[#800000] border-[#800000]/10"
+                                  }`}
                               >
                                 {plan.expanded ? "Collapse" : "Expand"}
                               </button>
@@ -1317,11 +1376,10 @@ const isGradingValid = totalGradingPercentage === 100;
                                               : [...current, clo.id];
                                             handleWeekChange(idx, "cloAlignment", updated);
                                           }}
-                                          className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${
-                                            isAligned
-                                              ? "bg-amber-700 border-amber-700 text-white"
-                                              : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                                          }`}
+                                          className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${isAligned
+                                            ? "bg-amber-700 border-amber-700 text-white"
+                                            : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                                            }`}
                                         >
                                           {clo.id}
                                         </button>
@@ -1353,16 +1411,15 @@ const isGradingValid = totalGradingPercentage === 100;
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               {/* Grading input builder */}
               <div className="space-y-4">
-                <div className={`p-4 border rounded-2xl flex items-center justify-between transition-all duration-300 ${
-                  isGradingValid
-                    ? "bg-green-50/50 border-green-200 text-green-800"
-                    : "bg-red-50/50 border-red-200 text-red-800"
-                }`}>
+                <div className={`p-4 border rounded-2xl flex items-center justify-between transition-all duration-300 ${isGradingValid
+                  ? "bg-green-50/50 border-green-200 text-green-800"
+                  : "bg-red-50/50 border-red-200 text-red-800"
+                  }`}>
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-widest block text-gray-400">Total Breakdown</span>
                     <span className="text-2xl font-black">{totalGradingPercentage}%</span>
                   </div>
-                  
+
                   <div>
                     {isGradingValid ? (
                       <span className="px-2.5 py-1 text-[10px] font-bold bg-green-600 text-white rounded-lg flex items-center gap-1 shadow-sm">
@@ -1389,7 +1446,7 @@ const isGradingValid = totalGradingPercentage === 100;
                         placeholder="e.g. Laboratory Exams, Assignments"
                         className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 focus:border-[#800000] focus:outline-none focus:ring-2 focus:ring-[#800000]/10 bg-white"
                       />
-                      
+
                       <div className="w-24 relative flex-shrink-0">
                         <input
                           type="number"
@@ -1441,15 +1498,14 @@ const isGradingValid = totalGradingPercentage === 100;
                       cx="50"
                       cy="50"
                       r="40"
-                      className={`fill-transparent transition-all duration-500 ${
-                        isGradingValid ? "stroke-green-500" : "stroke-[#800000]"
-                      }`}
+                      className={`fill-transparent transition-all duration-500 ${isGradingValid ? "stroke-green-500" : "stroke-[#800000]"
+                        }`}
                       strokeWidth="8"
                       strokeDasharray={`${2 * Math.PI * 40}`}
                       strokeDashoffset={`${2 * Math.PI * 40 * (1 - Math.min(totalGradingPercentage, 100) / 100)}`}
                     />
                   </svg>
-                  
+
                   {/* Center metrics */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
                     <span className="text-3xl font-black text-gray-800">{totalGradingPercentage}%</span>
@@ -1507,11 +1563,10 @@ const isGradingValid = totalGradingPercentage === 100;
         )}
 
         {!ocrLoading && ocrStatusText && (
-          <div className={`mt-4 p-3 border rounded-xl flex items-center gap-2 text-xs font-semibold ${
-            ocrSuccess
-              ? "bg-green-50 border-green-200 text-green-800"
-              : "bg-red-50 border-red-200 text-red-800"
-          }`}>
+          <div className={`mt-4 p-3 border rounded-xl flex items-center gap-2 text-xs font-semibold ${ocrSuccess
+            ? "bg-green-50 border-green-200 text-green-800"
+            : "bg-red-50 border-red-200 text-red-800"
+            }`}>
             <Check className="w-4 h-4" />
             <span>{ocrStatusText}</span>
           </div>

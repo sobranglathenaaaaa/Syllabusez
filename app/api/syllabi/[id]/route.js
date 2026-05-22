@@ -7,9 +7,12 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params;
 
-    // 1. Get syllabus metadata
+    // 1. Get syllabus metadata (with modern fields)
     const syllabi = await query(
       `SELECT s.id, s.course_id, s.instructor_id, s.status, s.version, s.approval_comment, s.updated_at,
+              s.course_description, s.prerequisites, s.corequisites, s.semester, s.academic_year,
+              s.vision, s.mission, s.quality_policy, s.institutional_outcomes,
+              s.program_outcomes, s.course_outcomes, s.performance_indicators,
               c.code, c.title, c.units, c.department_id,
               p.full_name as instructor_name, p.email as instructor_email
        FROM syllabi s
@@ -33,7 +36,11 @@ export async function GET(request, { params }) {
 
     // 3. Get Weekly Plans
     const plans = await query(
-      "SELECT id, week, topic, activities, assessments, materials, order_index FROM weekly_plans WHERE syllabus_id = ? ORDER BY week ASC, order_index ASC",
+      `SELECT id, week, topic, activities, assessments, materials, order_index, 
+              desired_learning_outcomes, clo_alignment 
+       FROM weekly_plans 
+       WHERE syllabus_id = ? 
+       ORDER BY week ASC, order_index ASC`,
       [id]
     );
 
@@ -42,6 +49,37 @@ export async function GET(request, { params }) {
       "SELECT id, name, percentage, order_index FROM grading_components WHERE syllabus_id = ? ORDER BY order_index ASC",
       [id]
     );
+
+    // Parse JSON columns in metadata if they are strings
+    try {
+      syllabus.institutional_outcomes = syllabus.institutional_outcomes ? JSON.parse(syllabus.institutional_outcomes) : [];
+    } catch {
+      syllabus.institutional_outcomes = [];
+    }
+    try {
+      syllabus.program_outcomes = syllabus.program_outcomes ? JSON.parse(syllabus.program_outcomes) : [];
+    } catch {
+      syllabus.program_outcomes = [];
+    }
+    try {
+      syllabus.course_outcomes = syllabus.course_outcomes ? JSON.parse(syllabus.course_outcomes) : [];
+    } catch {
+      syllabus.course_outcomes = [];
+    }
+    try {
+      syllabus.performance_indicators = syllabus.performance_indicators ? JSON.parse(syllabus.performance_indicators) : [];
+    } catch {
+      syllabus.performance_indicators = [];
+    }
+
+    // Parse week alignments
+    plans.forEach(p => {
+      try {
+        p.clo_alignment = p.clo_alignment ? JSON.parse(p.clo_alignment) : [];
+      } catch {
+        p.clo_alignment = [];
+      }
+    });
 
     // Pack details
     syllabus.learning_outcomes = outcomes;
@@ -64,7 +102,25 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 419 });
     }
 
-    const { courseId, status, learningOutcomes, weeklyPlans, gradingComponents } = await request.json();
+    const {
+      courseId,
+      status,
+      learningOutcomes,
+      weeklyPlans,
+      gradingComponents,
+      courseDescription,
+      prerequisites,
+      corequisites,
+      semester,
+      academicYear,
+      vision,
+      mission,
+      qualityPolicy,
+      institutionalOutcomes,
+      programOutcomes,
+      courseOutcomes,
+      performanceIndicators
+    } = await request.json();
 
     if (!courseId) {
       return NextResponse.json({ error: "Course is required." }, { status: 400 });
@@ -84,10 +140,31 @@ export async function PUT(request, { params }) {
     }
 
     // 2. Update parent syllabus metadata
-    // Reset approval_comment to null since it is updated and re-evaluated
     await query(
-      "UPDATE syllabi SET course_id = ?, status = ?, version = ?, approval_comment = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-      [courseId, status || "draft", newVersion, id]
+      `UPDATE syllabi SET 
+        course_id = ?, status = ?, version = ?, approval_comment = NULL, updated_at = CURRENT_TIMESTAMP,
+        course_description = ?, prerequisites = ?, corequisites = ?, semester = ?, academic_year = ?,
+        vision = ?, mission = ?, quality_policy = ?, institutional_outcomes = ?,
+        program_outcomes = ?, course_outcomes = ?, performance_indicators = ?
+       WHERE id = ?`,
+      [
+        courseId,
+        status || "draft",
+        newVersion,
+        courseDescription || "",
+        prerequisites || "",
+        corequisites || "",
+        semester || "",
+        academicYear || "",
+        vision || "",
+        mission || "",
+        qualityPolicy || "",
+        JSON.stringify(institutionalOutcomes || []),
+        JSON.stringify(programOutcomes || []),
+        JSON.stringify(courseOutcomes || []),
+        JSON.stringify(performanceIndicators || []),
+        id
+      ]
     );
 
     // 3. Clear old child rows
@@ -110,8 +187,19 @@ export async function PUT(request, { params }) {
       for (let i = 0; i < weeklyPlans.length; i++) {
         const p = weeklyPlans[i];
         await query(
-          "INSERT INTO weekly_plans (id, syllabus_id, week, topic, activities, assessments, materials, order_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-          [crypto.randomUUID(), id, p.week, p.topic, p.activities, p.assessments, p.materials, i + 1]
+          "INSERT INTO weekly_plans (id, syllabus_id, week, topic, activities, assessments, materials, order_index, desired_learning_outcomes, clo_alignment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [
+            crypto.randomUUID(),
+            id,
+            p.week,
+            p.topic,
+            p.activities || "",
+            p.assessments || "",
+            p.materials || "",
+            i + 1,
+            p.desiredLearningOutcomes || "",
+            JSON.stringify(p.cloAlignment || [])
+          ]
         );
       }
     }

@@ -66,7 +66,25 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized. Please login." }, { status: 419 });
     }
 
-    const { courseId, status, learningOutcomes, weeklyPlans, gradingComponents } = await request.json();
+    const {
+      courseId,
+      status,
+      learningOutcomes,
+      weeklyPlans,
+      gradingComponents,
+      courseDescription,
+      prerequisites,
+      corequisites,
+      semester,
+      academicYear,
+      vision,
+      mission,
+      qualityPolicy,
+      institutionalOutcomes,
+      programOutcomes,
+      courseOutcomes,
+      performanceIndicators
+    } = await request.json();
 
     if (!courseId) {
       return NextResponse.json({ error: "Course selection is required." }, { status: 400 });
@@ -76,8 +94,30 @@ export async function POST(request) {
 
     // 1. Insert Syllabus metadata
     await query(
-      "INSERT INTO syllabi (id, course_id, instructor_id, status, version) VALUES (?, ?, ?, ?, 1)",
-      [syllabusId, courseId, instructorId, status || "draft"]
+      `INSERT INTO syllabi (
+        id, course_id, instructor_id, status, version,
+        course_description, prerequisites, corequisites, semester, academic_year,
+        vision, mission, quality_policy, institutional_outcomes,
+        program_outcomes, course_outcomes, performance_indicators
+      ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        syllabusId,
+        courseId,
+        instructorId,
+        status || "draft",
+        courseDescription || "",
+        prerequisites || "",
+        corequisites || "",
+        semester || "",
+        academicYear || "",
+        vision || "",
+        mission || "",
+        qualityPolicy || "",
+        JSON.stringify(institutionalOutcomes || []),
+        JSON.stringify(programOutcomes || []),
+        JSON.stringify(courseOutcomes || []),
+        JSON.stringify(performanceIndicators || [])
+      ]
     );
 
     // 2. Insert Learning Outcomes
@@ -95,8 +135,19 @@ export async function POST(request) {
       for (let i = 0; i < weeklyPlans.length; i++) {
         const p = weeklyPlans[i];
         await query(
-          "INSERT INTO weekly_plans (id, syllabus_id, week, topic, activities, assessments, materials, order_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-          [crypto.randomUUID(), syllabusId, p.week, p.topic, p.activities, p.assessments, p.materials, i + 1]
+          "INSERT INTO weekly_plans (id, syllabus_id, week, topic, activities, assessments, materials, order_index, desired_learning_outcomes, clo_alignment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [
+            crypto.randomUUID(),
+            syllabusId,
+            p.week,
+            p.topic,
+            p.activities || "",
+            p.assessments || "",
+            p.materials || "",
+            i + 1,
+            p.desiredLearningOutcomes || "",
+            JSON.stringify(p.cloAlignment || [])
+          ]
         );
       }
     }

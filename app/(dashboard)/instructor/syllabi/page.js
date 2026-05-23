@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { SyllabusList } from "@/components/syllabus/SyllabusList";
 
 export default async function InstructorSyllabiPage() {
@@ -28,13 +29,14 @@ export default async function InstructorSyllabiPage() {
 
       {/* Create Button BELOW search */}
       <div className="flex justify-end">
-        <Link href="/instructor/syllabi/new">
-          <button className="px-4 py-2 bg-[#800000] text-white rounded-xl hover:bg-[#a00000] transition-colors font-semibold shadow-sm">
-            Create New Syllabus
-          </button>
+        <Link
+          href="/instructor/syllabi/new"
+          className="flex items-center justify-center gap-2 px-5 py-3 bg-[#800000] hover:bg-red-900 text-white rounded-2xl font-bold text-xs shadow-md shadow-red-800/10 transition-all hover:scale-[1.01] active:scale-[0.99] flex-shrink-0"
+        >
+          <Plus className="w-4.5 h-4.5" />
+          <span>Create New Syllabus</span>
         </Link>
       </div>
-
     </div>
   );
 }

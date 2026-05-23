@@ -163,6 +163,7 @@ export default function Home() {
                     defaultValue="instructor@pup.edu.ph"
                     className="block w-full appearance-none rounded-xl border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm text-gray-900"
                     placeholder="Enter your email"
+                    suppressHydrationWarning
                   />
                 </div>
               </div>
@@ -184,11 +185,13 @@ export default function Home() {
                     defaultValue="••••••••"
                     className="block w-full appearance-none rounded-xl border border-gray-300 pl-4 pr-12 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm text-gray-900"
                     placeholder="Enter your password"
+                    suppressHydrationWarning
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                    suppressHydrationWarning
                   >
                     {showPassword ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,6 +214,7 @@ export default function Home() {
                     name="remember-me"
                     type="checkbox"
                     className="h-4 w-4 rounded border-gray-300 text-red-800 focus:ring-red-800 transition-colors cursor-pointer"
+                    suppressHydrationWarning
                   />
                   <label
                     htmlFor="remember-me"
@@ -234,6 +238,7 @@ export default function Home() {
                 <button
                   type="submit"
                   className="flex w-full justify-center rounded-xl bg-red-800 py-3 px-4 text-sm font-semibold text-white shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-800 focus:ring-offset-2 transition-all active:scale-[0.98]"
+                  suppressHydrationWarning
                 >
                   Sign in
                 </button>
@@ -250,11 +255,11 @@ export default function Home() {
             <div className="mt-6 border border-dashed border-red-300 bg-red-50 p-4 rounded-xl text-center">
               <p className="text-xs font-semibold text-red-800 uppercase tracking-wider mb-3">Temporary Quick Access</p>
               <div className="flex justify-center gap-4 text-sm">
-                <button type="button" onClick={() => handleQuickLogin('admin')} className="font-medium text-red-700 hover:text-red-900 hover:underline transition-colors">Admin</button>
+                <button type="button" onClick={() => handleQuickLogin('admin')} className="font-medium text-red-700 hover:text-red-900 hover:underline transition-colors" suppressHydrationWarning>Admin</button>
                 <span className="text-red-300">|</span>
-                <button type="button" onClick={() => handleQuickLogin('instructor')} className="font-medium text-red-700 hover:text-red-900 hover:underline transition-colors">Instructor</button>
+                <button type="button" onClick={() => handleQuickLogin('instructor')} className="font-medium text-red-700 hover:text-red-900 hover:underline transition-colors" suppressHydrationWarning>Instructor</button>
                 <span className="text-red-300">|</span>
-                <button type="button" onClick={() => handleQuickLogin('student')} className="font-medium text-red-700 hover:text-red-900 hover:underline transition-colors">Student</button>
+                <button type="button" onClick={() => handleQuickLogin('student')} className="font-medium text-red-700 hover:text-red-900 hover:underline transition-colors" suppressHydrationWarning>Student</button>
               </div>
             </div>
           </div>

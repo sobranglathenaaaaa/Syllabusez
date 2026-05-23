@@ -72,35 +72,32 @@ export function SyllabusEditor({ syllabusId = null }) {
   const [vision, setVision] = useState(DEFAULT_PUP_VISION);
   const [mission, setMission] = useState(DEFAULT_PUP_MISSION);
   const [qualityPolicy, setQualityPolicy] = useState(DEFAULT_PUP_QUALITY_POLICY);
-  const [institutionalOutcomes, setInstitutionalOutcomes] = useState(DEFAULT_ILOS);
+  const [institutionalOutcomes, setInstitutionalOutcomes] = useState([]);
 
   // SECTION C: Learning Outcomes Manager State
-  const [programOutcomes, setProgramOutcomes] = useState([
-    { id: "PLO-1", description: "Demonstrate deep understanding of computer science core foundations and theories.", alignments: ["Academic Excellence"] }
-  ]);
-  const [courseOutcomes, setCourseOutcomes] = useState([
-    { id: "CLO-1", description: "Formulate correct algorithms using sequential, selection, and iterative control structures.", alignments: ["PLO-1"] }
-  ]);
+  const [programOutcomes, setProgramOutcomes] = useState([]);
+  const [courseOutcomes, setCourseOutcomes] = useState([]);
   // Added Campus Goals state
   const [campusGoals, setCampusGoals] = useState([]);
 
   // Performance Indicators state
-  const [performanceIndicators, setPerformanceIndicators] = useState([
-    { id: "PI-1", description: "Construct correct flowcharts and pseudocode to solve mathematical and business problems.", alignments: ["CLO-1"] }
-  ]);
+  const [performanceIndicators, setPerformanceIndicators] = useState([]);
 
   // ILO and Campus Goals handlers
   const addILO = () => {
-    setInstitutionalOutcomes([...institutionalOutcomes, ""]);
+    setInstitutionalOutcomes([...institutionalOutcomes, { name: "", meaning: "" }]);
   };
   const removeILO = (index) => {
     const list = [...institutionalOutcomes];
     list.splice(index, 1);
     setInstitutionalOutcomes(list);
   };
-  const updateILO = (index, value) => {
+  const updateILO = (index, field, value) => {
     const list = [...institutionalOutcomes];
-    list[index] = value;
+    if (typeof list[index] !== "object") {
+      list[index] = { name: list[index] || "", meaning: "" };
+    }
+    list[index][field] = value;
     setInstitutionalOutcomes(list);
   };
 
@@ -119,26 +116,10 @@ export function SyllabusEditor({ syllabusId = null }) {
   };
 
   // SECTION D: Weekly Plan Builder State
-  const [weeklyPlans, setWeeklyPlans] = useState([
-    {
-      week: 1,
-      topic: "PUP Orientation & Introduction to Computing Concept",
-      activities: "Interactive lecture, Ice-breaker discussion",
-      assessments: "Personal learning goal essay",
-      materials: "PUP Handbook, Slide deck 1",
-      desiredLearningOutcomes: "Understand PUP ideals and core computing metrics",
-      cloAlignment: ["CLO-1"],
-      expanded: false
-    }
-  ]);
+  const [weeklyPlans, setWeeklyPlans] = useState([]);
 
   // SECTION E: Grading Components State
-  const [gradingComponents, setGradingComponents] = useState([
-    { name: "Midterm & Final Exams", percentage: 40 },
-    { name: "Quizzes", percentage: 20 },
-    { name: "Programming Exercises", percentage: 30 },
-    { name: "Projects", percentage: 10 }
-  ]);
+  const [gradingComponents, setGradingComponents] = useState([]);
 
   const totalGradingPercentage = gradingComponents.reduce((sum, item) => sum + item.percentage, 0);
   const isGradingValid = totalGradingPercentage === 100;
@@ -194,11 +175,15 @@ export function SyllabusEditor({ syllabusId = null }) {
             if (s.weekly_plans?.length > 0) {
               setWeeklyPlans(s.weekly_plans.map(p => ({
                 week: p.week,
-                topic: p.topic,
+                topic: p.topic || "",
+                desiredLearningOutcomes: p.desired_learning_outcomes || "",
+                learningContent: p.learning_content || p.topic || "",
+                faceFace: p.face_face || "",
+                synchronous: p.synchronous || "",
+                asynchronous: p.asynchronous || "",
                 activities: p.activities || "",
                 assessments: p.assessments || "",
                 materials: p.materials || "",
-                desiredLearningOutcomes: p.desired_learning_outcomes || "",
                 cloAlignment: p.clo_alignment || [],
                 expanded: false
               })));
@@ -356,18 +341,22 @@ export function SyllabusEditor({ syllabusId = null }) {
       ...weeklyPlans,
       {
         week: nextWeekNum,
+        desiredLearningOutcomes: "",
+        learningContent: "",
+        faceFace: "",
+        synchronous: "",
+        asynchronous: "",
+        assessments: "",
+        cloAlignment: [],
+        // legacy fields kept for backward compat
         topic: "",
         activities: "",
-        assessments: "",
         materials: "",
-        desiredLearningOutcomes: "",
-        cloAlignment: [],
-        expanded: true
+        expanded: false
       }
     ]);
   };
   const removeWeek = (index) => {
-    if (weeklyPlans.length === 1) return;
     const list = [...weeklyPlans];
     list.splice(index, 1);
     const reindexed = list.map((item, i) => ({ ...item, week: i + 1 }));
@@ -890,21 +879,36 @@ export function SyllabusEditor({ syllabusId = null }) {
                     </div>
                     {/* Content Column */}
                     <div className="p-4 space-y-3">
-                      {institutionalOutcomes.map((ilo, idx) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <span className="font-bold text-gray-600 w-5 text-right">{idx + 1}.</span>
-                          <input
-                            type="text"
-                            value={ilo}
-                            onChange={(e) => updateILO(idx, e.target.value)}
-                            placeholder="Institutional outcome description"
-                            className="flex-1 border-b border-gray-300 text-sm focus:border-[#800000] focus:outline-none"
-                          />
-                          <button type="button" onClick={() => removeILO(idx)} className="p-1 text-gray-400 hover:text-red-600">
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                      {institutionalOutcomes.map((ilo, idx) => {
+                        const name = typeof ilo === "object" ? ilo.name : ilo;
+                        const meaning = typeof ilo === "object" ? ilo.meaning : "";
+                        return (
+                          <div key={idx} className="space-y-1.5 p-2 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-gray-200 transition-all">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-600 w-5 text-right">{idx + 1}.</span>
+                              <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => updateILO(idx, "name", e.target.value)}
+                                placeholder="Institutional Learning Outcome Title"
+                                className="flex-1 border-b border-gray-300 text-sm font-semibold focus:border-[#800000] focus:outline-none"
+                              />
+                              <button type="button" onClick={() => removeILO(idx)} className="p-1 text-gray-400 hover:text-red-600">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <div className="pl-7">
+                              <input
+                                type="text"
+                                value={meaning}
+                                onChange={(e) => updateILO(idx, "meaning", e.target.value)}
+                                placeholder="→ Sub-line / Meaning for this outcome..."
+                                className="w-full border-b border-dashed border-gray-200 text-xs text-gray-500 focus:border-[#800000] focus:outline-none py-0.5 italic"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                       <button type="button" onClick={addILO} className="mt-2 text-xs text-[#800000] hover:underline">
                         + Add ILO
                       </button>
@@ -939,15 +943,6 @@ export function SyllabusEditor({ syllabusId = null }) {
                     </div>
                   </div>
                 </div>
-                )
-                <button
-                  type="button"
-                  onClick={() => setInstitutionalOutcomes([...institutionalOutcomes, "New Learning Outcome"])}
-                  className="mt-2 text-xs font-bold text-[#800000] hover:underline flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Institutional Outcome</span>
-                </button>
               </div>
             </div>
           </div>
@@ -981,69 +976,45 @@ export function SyllabusEditor({ syllabusId = null }) {
               </div>
 
               <div className="space-y-3">
-                {programOutcomes.map((plo, idx) => (
-                  <div key={plo.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50/30 flex gap-4 items-start relative group">
-                    <span className="px-2.5 py-1 bg-[#800000] text-amber-400 font-black text-[10px] rounded-lg shadow-sm">
-                      {plo.id}
-                    </span>
+                {programOutcomes.length === 0 ? (
+                  <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl text-xs font-semibold text-gray-400 bg-white">
+                    No Program Learning Outcomes defined. Click "+ Add PLO" to get started.
+                  </div>
+                ) : (
+                  programOutcomes.map((plo, idx) => (
+                    <div key={plo.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50/30 flex gap-4 items-start relative group">
+                      <span className="px-2.5 py-1 bg-[#800000] text-amber-400 font-black text-[10px] rounded-lg shadow-sm">
+                        {plo.id}
+                      </span>
 
-                    <div className="flex-1 space-y-3">
-                      <textarea
-                        rows={2}
-                        placeholder="Describe Program Learning Outcome standard expected upon graduation..."
-                        value={plo.description}
-                        onChange={(e) => updatePLO(idx, "description", e.target.value)}
-                        className="w-full p-2.5 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:border-[#800000] focus:outline-none focus:ring-1 focus:ring-[#800000]/10 bg-white"
-                      />
+                      <div className="flex-1">
+                        <textarea
+                          rows={2}
+                          placeholder="Describe Program Learning Outcome standard expected upon graduation..."
+                          value={plo.description}
+                          onChange={(e) => updatePLO(idx, "description", e.target.value)}
+                          className="w-full p-2.5 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:border-[#800000] focus:outline-none focus:ring-1 focus:ring-[#800000]/10 bg-white"
+                        />
+                      </div>
 
-                      {/* Alignments tags with Institutional Outcomes */}
-                      <div>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Aligned Institutional Outcomes (ILO)</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {institutionalOutcomes.map((ilo) => {
-                            const isAligned = plo.alignments?.includes(ilo);
-                            return (
-                              <button
-                                type="button"
-                                key={ilo}
-                                onClick={() => {
-                                  const current = plo.alignments || [];
-                                  const updated = isAligned
-                                    ? current.filter(x => x !== ilo)
-                                    : [...current, ilo];
-                                  updatePLO(idx, "alignments", updated);
-                                }}
-                                className={`px-2 py-1 text-[9px] font-bold rounded-lg border transition-all ${isAligned
-                                  ? "bg-amber-600 border-amber-600 text-white shadow-sm"
-                                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                                  }`}
-                              >
-                                {ilo}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      <div className="flex flex-col gap-1 items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                        <button type="button" onClick={() => movePLO(idx, -1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" onClick={() => movePLO(idx, 1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removePLO(idx)}
+                          className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex flex-col gap-1 items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
-                      <button type="button" onClick={() => movePLO(idx, -1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" onClick={() => movePLO(idx, 1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removePLO(idx)}
-                        disabled={programOutcomes.length === 1}
-                        className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 disabled:opacity-30"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -1065,69 +1036,45 @@ export function SyllabusEditor({ syllabusId = null }) {
               </div>
 
               <div className="space-y-3">
-                {courseOutcomes.map((clo, idx) => (
-                  <div key={clo.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50/30 flex gap-4 items-start relative group">
-                    <span className="px-2.5 py-1 bg-amber-700 text-white font-black text-[10px] rounded-lg shadow-sm">
-                      {clo.id}
-                    </span>
+                {courseOutcomes.length === 0 ? (
+                  <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl text-xs font-semibold text-gray-400 bg-white">
+                    No Course Learning Outcomes defined. Click "+ Add CLO" to get started.
+                  </div>
+                ) : (
+                  courseOutcomes.map((clo, idx) => (
+                    <div key={clo.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50/30 flex gap-4 items-start relative group">
+                      <span className="px-2.5 py-1 bg-amber-700 text-white font-black text-[10px] rounded-lg shadow-sm">
+                        {clo.id}
+                      </span>
 
-                    <div className="flex-1 space-y-3">
-                      <textarea
-                        rows={2}
-                        placeholder="Describe specific course execution parameters expected of students..."
-                        value={clo.description}
-                        onChange={(e) => updateCLO(idx, "description", e.target.value)}
-                        className="w-full p-2.5 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:border-[#800000] focus:outline-none focus:ring-1 focus:ring-[#800000]/10 bg-white"
-                      />
+                      <div className="flex-1">
+                        <textarea
+                          rows={2}
+                          placeholder="Describe specific course execution parameters expected of students..."
+                          value={clo.description}
+                          onChange={(e) => updateCLO(idx, "description", e.target.value)}
+                          className="w-full p-2.5 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:border-[#800000] focus:outline-none focus:ring-1 focus:ring-[#800000]/10 bg-white"
+                        />
+                      </div>
 
-                      {/* Alignment targeting with PLOs */}
-                      <div>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Aligned Program Outcomes (PLO)</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {programOutcomes.map((plo) => {
-                            const isAligned = clo.alignments?.includes(plo.id);
-                            return (
-                              <button
-                                type="button"
-                                key={plo.id}
-                                onClick={() => {
-                                  const current = clo.alignments || [];
-                                  const updated = isAligned
-                                    ? current.filter(x => x !== plo.id)
-                                    : [...current, plo.id];
-                                  updateCLO(idx, "alignments", updated);
-                                }}
-                                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${isAligned
-                                  ? "bg-[#800000] border-[#800000] text-white shadow-sm"
-                                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                                  }`}
-                              >
-                                {plo.id}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      <div className="flex flex-col gap-1 items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                        <button type="button" onClick={() => moveCLO(idx, -1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" onClick={() => moveCLO(idx, 1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeCLO(idx)}
+                          className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex flex-col gap-1 items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
-                      <button type="button" onClick={() => moveCLO(idx, -1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" onClick={() => moveCLO(idx, 1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeCLO(idx)}
-                        disabled={courseOutcomes.length === 1}
-                        className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 disabled:opacity-30"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -1149,69 +1096,222 @@ export function SyllabusEditor({ syllabusId = null }) {
               </div>
 
               <div className="space-y-3">
-                {performanceIndicators.map((pi, idx) => (
-                  <div key={pi.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50/30 flex gap-4 items-start relative group">
-                    <span className="px-2.5 py-1 bg-indigo-700 text-white font-black text-[10px] rounded-lg shadow-sm">
-                      {pi.id}
-                    </span>
+                {performanceIndicators.length === 0 ? (
+                  <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl text-xs font-semibold text-gray-400 bg-white">
+                    No Performance Indicators defined. Click "+ Add PI" to get started.
+                  </div>
+                ) : (
+                  performanceIndicators.map((pi, idx) => (
+                    <div key={pi.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50/30 flex gap-4 items-start relative group">
+                      <span className="px-2.5 py-1 bg-indigo-700 text-white font-black text-[10px] rounded-lg shadow-sm">
+                        {pi.id}
+                      </span>
 
-                    <div className="flex-1 space-y-3">
-                      <textarea
-                        rows={2}
-                        placeholder="Describe measurable performance metrics and evidences of logic coding..."
-                        value={pi.description}
-                        onChange={(e) => updatePI(idx, "description", e.target.value)}
-                        className="w-full p-2.5 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:border-[#800000] focus:outline-none focus:ring-1 focus:ring-[#800000]/10 bg-white"
-                      />
+                      <div className="flex-1">
+                        <textarea
+                          rows={2}
+                          placeholder="Describe measurable performance metrics and evidences of logic coding..."
+                          value={pi.description}
+                          onChange={(e) => updatePI(idx, "description", e.target.value)}
+                          className="w-full p-2.5 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:border-[#800000] focus:outline-none focus:ring-1 focus:ring-[#800000]/10 bg-white"
+                        />
+                      </div>
 
-                      {/* Alignments tags targeting CLOs */}
-                      <div>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Aligned Course Outcomes (CLO)</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {courseOutcomes.map((clo) => {
-                            const isAligned = pi.alignments?.includes(clo.id);
-                            return (
-                              <button
-                                type="button"
-                                key={clo.id}
-                                onClick={() => {
-                                  const current = pi.alignments || [];
-                                  const updated = isAligned
-                                    ? current.filter(x => x !== clo.id)
-                                    : [...current, clo.id];
-                                  updatePI(idx, "alignments", updated);
-                                }}
-                                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${isAligned
-                                  ? "bg-amber-700 border-amber-700 text-white shadow-sm"
-                                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                                  }`}
-                              >
-                                {clo.id}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      <div className="flex flex-col gap-1 items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                        <button type="button" onClick={() => movePI(idx, -1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" onClick={() => movePI(idx, 1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removePI(idx)}
+                          className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
+                  ))
+                )}
+              </div>
+            </div>
 
-                    <div className="flex flex-col gap-1 items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
-                      <button type="button" onClick={() => movePI(idx, -1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" onClick={() => movePI(idx, 1)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removePI(idx)}
-                        disabled={performanceIndicators.length === 1}
-                        className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 disabled:opacity-30"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+            {/* OBE Outcomes Alignment Matrices */}
+            <div className="mt-8 pt-6 border-t border-gray-100 space-y-6">
+              <div>
+                <h4 className="text-sm font-extrabold text-gray-900 uppercase tracking-wide">OBE Outcomes Alignment Matrices</h4>
+                <p className="text-xs text-gray-400 font-semibold mt-0.5">Real-time outcomes-mapping validator grids</p>
+              </div>
+
+              {/* 1. PLO to ILO Matrix */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">1. PLO to ILO Alignment Matrix</span>
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50/50">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse bg-white">
+                      <thead>
+                        <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
+                          <th className="py-2.5 px-4 border w-36 text-left">Program Outcome (PLO)</th>
+                          {institutionalOutcomes.map((ilo, iloIdx) => {
+                            const iloName = typeof ilo === "object" ? ilo.name : ilo;
+                            return (
+                              <th key={iloIdx} className="py-2.5 px-3 border max-w-[150px] truncate" title={iloName}>
+                                {iloName || `ILO-${iloIdx + 1}`}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
+                        {programOutcomes.length === 0 ? (
+                          <tr>
+                            <td colSpan={institutionalOutcomes.length + 1} className="py-4 text-center text-gray-400 italic">
+                              No PLOs defined to align.
+                            </td>
+                          </tr>
+                        ) : (
+                          programOutcomes.map((plo, ploIdx) => (
+                            <tr key={plo.id} className="hover:bg-gray-50/50">
+                              <td className="py-2 px-4 border font-bold text-[#800000]" title={plo.description}>
+                                {plo.id}
+                              </td>
+                              {institutionalOutcomes.map((ilo, iloIdx) => {
+                                const iloName = typeof ilo === "object" ? ilo.name : ilo;
+                                return (
+                                  <td key={iloIdx} className="p-2 border text-center">
+                                    <input
+                                      type="checkbox"
+                                      disabled={!iloName}
+                                      checked={plo.alignments?.includes(iloName)}
+                                      onChange={() => {
+                                        const current = plo.alignments || [];
+                                        const updated = current.includes(iloName)
+                                          ? current.filter(x => x !== iloName)
+                                          : [...current, iloName];
+                                        updatePLO(ploIdx, "alignments", updated);
+                                      }}
+                                      className="w-4 h-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded cursor-pointer"
+                                    />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
+                </div>
+              </div>
+
+              {/* 2. CLO to PLO Matrix */}
+              <div className="space-y-3 pt-2">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">2. CLO to PLO Alignment Matrix</span>
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50/50">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse bg-white">
+                      <thead>
+                        <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
+                          <th className="py-2.5 px-4 border w-36 text-left">Course Outcome (CLO)</th>
+                          {programOutcomes.map((plo) => (
+                            <th key={plo.id} className="py-2.5 px-3 border max-w-[150px] truncate" title={plo.description}>
+                              {plo.id}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
+                        {courseOutcomes.length === 0 ? (
+                          <tr>
+                            <td colSpan={programOutcomes.length + 1} className="py-4 text-center text-gray-400 italic">
+                              No CLOs defined to align.
+                            </td>
+                          </tr>
+                        ) : (
+                          courseOutcomes.map((clo, cloIdx) => (
+                            <tr key={clo.id} className="hover:bg-gray-50/50">
+                              <td className="py-2 px-4 border font-bold text-amber-700" title={clo.description}>
+                                {clo.id}
+                              </td>
+                              {programOutcomes.map((plo) => (
+                                <td key={plo.id} className="p-2 border text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={clo.alignments?.includes(plo.id)}
+                                    onChange={() => {
+                                      const current = clo.alignments || [];
+                                      const updated = current.includes(plo.id)
+                                        ? current.filter(x => x !== plo.id)
+                                        : [...current, plo.id];
+                                      updateCLO(cloIdx, "alignments", updated);
+                                    }}
+                                    className="w-4 h-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded cursor-pointer"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. PI to PLO Matrix */}
+              <div className="space-y-3 pt-2">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">3. PI to PLO Alignment Matrix</span>
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50/50">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse bg-white">
+                      <thead>
+                        <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
+                          <th className="py-2.5 px-4 border w-36 text-left">Performance Indicator (PI)</th>
+                          {programOutcomes.map((plo) => (
+                            <th key={plo.id} className="py-2.5 px-3 border max-w-[150px] truncate" title={plo.description}>
+                              {plo.id}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
+                        {performanceIndicators.length === 0 ? (
+                          <tr>
+                            <td colSpan={programOutcomes.length + 1} className="py-4 text-center text-gray-400 italic">
+                              No PIs defined to align.
+                            </td>
+                          </tr>
+                        ) : (
+                          performanceIndicators.map((pi, piIdx) => (
+                            <tr key={pi.id} className="hover:bg-gray-50/50">
+                              <td className="py-2 px-4 border font-bold text-indigo-700" title={pi.description}>
+                                {pi.id}
+                              </td>
+                              {programOutcomes.map((plo) => (
+                                <td key={plo.id} className="p-2 border text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={pi.alignments?.includes(plo.id)}
+                                    onChange={() => {
+                                      const current = pi.alignments || [];
+                                      const updated = current.includes(plo.id)
+                                        ? current.filter(x => x !== plo.id)
+                                        : [...current, plo.id];
+                                      updatePI(piIdx, "alignments", updated);
+                                    }}
+                                    className="w-4 h-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded cursor-pointer"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1223,7 +1323,7 @@ export function SyllabusEditor({ syllabusId = null }) {
             <div className="border-b border-gray-100 pb-3 flex justify-between items-center">
               <div>
                 <h3 className="text-base font-extrabold text-gray-900 uppercase tracking-wide">D. OBTL Weekly Instructional Calendar</h3>
-                <p className="text-xs font-semibold text-gray-400 mt-0.5 uppercase tracking-widest">Spreadsheet-Like Custom Plan Builder</p>
+                <p className="text-xs font-semibold text-gray-400 mt-0.5 uppercase tracking-widest">Outcomes-Based Teaching & Learning Plan</p>
               </div>
               <button
                 type="button"
@@ -1235,170 +1335,199 @@ export function SyllabusEditor({ syllabusId = null }) {
               </button>
             </div>
 
-            {/* Spreadsheet Table Container */}
+            {/* OBTL Table */}
             <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-inner bg-gray-50/50">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse" style={{ minWidth: "1100px" }}>
                   <thead>
-                    <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200">
-                      <th className="py-3 px-4 w-28 text-center">Week Label</th>
-                      <th className="py-3 px-4 min-w-[200px]">Topic / Lesson Subject</th>
-                      <th className="py-3 px-4 min-w-[150px]">CLO Alignments</th>
-                      <th className="py-3 px-4 w-24 text-center">Actions</th>
+                    {/* Title Row — not editable */}
+                    <tr className="bg-[#800000]">
+                      <th colSpan={9} className="py-3 px-5 text-center text-xs font-black uppercase tracking-widest text-white">
+                        OUTCOMES-BASED TEACHING AND LEARNING PLAN (OBTL PLAN)
+                      </th>
+                    </tr>
+
+                    {/* Main column group headers */}
+                    <tr className="bg-gray-50 text-[9px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
+                      {/* B. Week */}
+                      <th className="py-2.5 px-3 border border-gray-200 w-16">B.<br />Week</th>
+                      {/* C. DLOs */}
+                      <th className="py-2.5 px-3 border border-gray-200 min-w-[140px]">C.<br />Desired Learning Outcomes (DLOs)</th>
+                      {/* D. Learning Content */}
+                      <th className="py-2.5 px-3 border border-gray-200 min-w-[140px]">D.<br />Learning Content / Topics</th>
+                      {/* E. Instructional Delivery Design — spans 3 sub-columns */}
+                      <th colSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[360px]">E. Instructional Delivery Design</th>
+                      {/* F. Assessment */}
+                      <th className="py-2.5 px-3 border border-gray-200 min-w-[120px]">F.<br />Assessment</th>
+                      {/* G. CLO Alignment */}
+                      <th className="py-2.5 px-3 border border-gray-200 min-w-[100px]">G.<br />Alignment to CLOs</th>
+                      {/* Actions */}
+                      <th className="py-2.5 px-3 border border-gray-200 w-12"></th>
+                    </tr>
+
+                    {/* Sub-headers for E */}
+                    <tr className="bg-gray-50/70 text-[9px] font-bold uppercase text-gray-400 tracking-wider border-b border-gray-200 text-center">
+                      {/* empty cells for B, C, D */}
+                      <th className="border border-gray-200 py-1.5"></th>
+                      <th className="border border-gray-200 py-1.5"></th>
+                      <th className="border border-gray-200 py-1.5"></th>
+                      {/* E sub-columns */}
+                      <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">E.1<br />Face-to-face</th>
+                      <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">
+                        E.2 FLTAs<br />
+                        <span className="text-[8px] normal-case font-semibold text-gray-300">Flexible Learning &amp; Teaching</span>
+                        <br />
+                        E.2.1 Synchronous
+                      </th>
+                      <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">E.2.2<br />Asynchronous</th>
+                      {/* empty cells for F, G, Actions */}
+                      <th className="border border-gray-200 py-1.5"></th>
+                      <th className="border border-gray-200 py-1.5"></th>
+                      <th className="border border-gray-200 py-1.5"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs font-medium text-gray-700 bg-white">
-                    {weeklyPlans.map((plan, idx) => (
-                      <Fragment key={idx}>
-                        {/* Standard collapsed row */}
-                        <tr key={idx} className="hover:bg-gray-50/40 transition-colors">
-                          <td className="py-3.5 px-4 text-center">
-                            <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg ${idx % 2 === 0
-                              ? "bg-[#800000]/10 text-[#800000]"
-                              : "bg-amber-600/10 text-amber-700"
-                              }`}>
-                              WEEK {plan.week}
+
+                  <tbody className="divide-y divide-gray-100 text-xs text-gray-700 bg-white">
+                    {weeklyPlans.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-10 text-center text-xs font-semibold text-gray-400">
+                          No weekly plans yet. Click "+ Add Week" to begin building the OBTL plan.
+                        </td>
+                      </tr>
+                    ) : (
+                      weeklyPlans.map((plan, idx) => (
+                        <tr key={idx} className={`hover:bg-gray-50/40 transition-colors align-top ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/20"}`}>
+
+                          {/* B. Week */}
+                          <td className="py-2.5 px-3 border border-gray-100 text-center align-middle">
+                            <span className={`px-2 py-1 text-[10px] font-black rounded-lg inline-block ${
+                              idx % 2 === 0
+                                ? "bg-[#800000]/10 text-[#800000]"
+                                : "bg-amber-600/10 text-amber-700"
+                            }`}>
+                              {plan.week}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4">
-                            <input
-                              type="text"
-                              required
-                              value={plan.topic}
-                              onChange={(e) => handleWeekChange(idx, "topic", e.target.value)}
-                              placeholder="Describe weekly lesson parameters..."
-                              className="w-full bg-transparent border-0 border-b border-transparent focus:border-[#800000] focus:ring-0 p-0 text-xs font-bold text-gray-800"
+
+                          {/* C. Desired Learning Outcomes */}
+                          <td className="py-2 px-2 border border-gray-100">
+                            <textarea
+                              rows={3}
+                              value={plan.desiredLearningOutcomes}
+                              onChange={(e) => handleWeekChange(idx, "desiredLearningOutcomes", e.target.value)}
+                              placeholder="Bloom's taxonomy learning outcomes..."
+                              className="w-full text-[11px] font-medium text-gray-700 bg-transparent border-0 focus:ring-0 resize-none p-0 placeholder-gray-300"
                             />
                           </td>
-                          <td className="py-3.5 px-4">
+
+                          {/* D. Learning Content / Topics */}
+                          <td className="py-2 px-2 border border-gray-100">
+                            <textarea
+                              rows={3}
+                              value={plan.learningContent}
+                              onChange={(e) => handleWeekChange(idx, "learningContent", e.target.value)}
+                              placeholder="Topics, modules, chapter coverage..."
+                              className="w-full text-[11px] font-medium text-gray-700 bg-transparent border-0 focus:ring-0 resize-none p-0 placeholder-gray-300"
+                            />
+                          </td>
+
+                          {/* E.1 Face-to-face */}
+                          <td className="py-2 px-2 border border-gray-100">
+                            <textarea
+                              rows={3}
+                              value={plan.faceFace}
+                              onChange={(e) => handleWeekChange(idx, "faceFace", e.target.value)}
+                              placeholder="In-person activities, lectures, labs..."
+                              className="w-full text-[11px] font-medium text-gray-700 bg-transparent border-0 focus:ring-0 resize-none p-0 placeholder-gray-300"
+                            />
+                          </td>
+
+                          {/* E.2.1 Synchronous */}
+                          <td className="py-2 px-2 border border-gray-100">
+                            <textarea
+                              rows={3}
+                              value={plan.synchronous}
+                              onChange={(e) => handleWeekChange(idx, "synchronous", e.target.value)}
+                              placeholder="Live online sessions, virtual discussions..."
+                              className="w-full text-[11px] font-medium text-gray-700 bg-transparent border-0 focus:ring-0 resize-none p-0 placeholder-gray-300"
+                            />
+                          </td>
+
+                          {/* E.2.2 Asynchronous */}
+                          <td className="py-2 px-2 border border-gray-100">
+                            <textarea
+                              rows={3}
+                              value={plan.asynchronous}
+                              onChange={(e) => handleWeekChange(idx, "asynchronous", e.target.value)}
+                              placeholder="Self-paced modules, recorded lectures, readings..."
+                              className="w-full text-[11px] font-medium text-gray-700 bg-transparent border-0 focus:ring-0 resize-none p-0 placeholder-gray-300"
+                            />
+                          </td>
+
+                          {/* F. Assessment */}
+                          <td className="py-2 px-2 border border-gray-100">
+                            <textarea
+                              rows={3}
+                              value={plan.assessments}
+                              onChange={(e) => handleWeekChange(idx, "assessments", e.target.value)}
+                              placeholder="Quizzes, lab outputs, performance tasks..."
+                              className="w-full text-[11px] font-medium text-gray-700 bg-transparent border-0 focus:ring-0 resize-none p-0 placeholder-gray-300"
+                            />
+                          </td>
+
+                          {/* G. CLO Alignment */}
+                          <td className="py-2 px-2 border border-gray-100 align-top">
                             <div className="flex flex-wrap gap-1">
-                              {plan.cloAlignment?.map(c => (
-                                <span key={c} className="px-1.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200/50 rounded font-black text-[9px]">
-                                  {c}
-                                </span>
-                              ))}
-                              {plan.cloAlignment?.length === 0 && (
-                                <span className="text-[10px] text-gray-400 italic font-semibold">No alignments mapped</span>
+                              {courseOutcomes.length === 0 ? (
+                                <span className="text-[9px] text-gray-300 italic">No CLOs defined</span>
+                              ) : (
+                                courseOutcomes.map((clo) => {
+                                  const isAligned = plan.cloAlignment?.includes(clo.id);
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={clo.id}
+                                      onClick={() => {
+                                        const current = plan.cloAlignment || [];
+                                        const updated = isAligned
+                                          ? current.filter(x => x !== clo.id)
+                                          : [...current, clo.id];
+                                        handleWeekChange(idx, "cloAlignment", updated);
+                                      }}
+                                      className={`px-1.5 py-0.5 text-[9px] font-bold rounded border transition-all ${isAligned
+                                        ? "bg-amber-700 border-amber-700 text-white"
+                                        : "bg-white border-gray-200 text-gray-400 hover:border-gray-400"
+                                      }`}
+                                    >
+                                      {clo.id}
+                                    </button>
+                                  );
+                                })
                               )}
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => toggleWeekExpand(idx)}
-                                className={`px-2 py-1 border rounded-lg text-[9px] font-bold transition-all ${plan.expanded
-                                  ? "bg-gray-100 text-gray-800"
-                                  : "bg-[#800000]/5 text-[#800000] border-[#800000]/10"
-                                  }`}
-                              >
-                                {plan.expanded ? "Collapse" : "Expand"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeWeek(idx)}
-                                disabled={weeklyPlans.length === 1}
-                                className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg disabled:opacity-30"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+
+                          {/* Delete action */}
+                          <td className="py-2 px-2 border border-gray-100 text-center align-middle">
+                            <button
+                              type="button"
+                              onClick={() => removeWeek(idx)}
+                              className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </td>
                         </tr>
-
-                        {/* Expanded details row */}
-                        {plan.expanded && (
-                          <tr className="bg-gray-50/50 border-t border-gray-100">
-                            <td colSpan={4} className="py-4 px-6">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Desired Learning Outcome */}
-                                <div>
-                                  <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Desired Learning Outcomes (DLO)</label>
-                                  <textarea
-                                    rows={2}
-                                    value={plan.desiredLearningOutcomes}
-                                    onChange={(e) => handleWeekChange(idx, "desiredLearningOutcomes", e.target.value)}
-                                    placeholder="Explain Bloom's outcomes specific to this week..."
-                                    className="w-full p-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:border-[#800000]"
-                                  />
-                                </div>
-
-                                {/* Teaching Activities */}
-                                <div>
-                                  <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Teaching & Learning Activities</label>
-                                  <textarea
-                                    rows={2}
-                                    value={plan.activities}
-                                    onChange={(e) => handleWeekChange(idx, "activities", e.target.value)}
-                                    placeholder="e.g. Programming laboratory demonstrations, arrays debug cycles..."
-                                    className="w-full p-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:border-[#800000]"
-                                  />
-                                </div>
-
-                                {/* Assessments */}
-                                <div>
-                                  <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Assessments / Evidences</label>
-                                  <input
-                                    type="text"
-                                    value={plan.assessments}
-                                    onChange={(e) => handleWeekChange(idx, "assessments", e.target.value)}
-                                    placeholder="e.g. Coding laboratory array module, short descriptive quiz..."
-                                    className="w-full p-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 bg-white focus:outline-none focus:border-[#800000]"
-                                  />
-                                </div>
-
-                                {/* References/Materials */}
-                                <div>
-                                  <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Reference Materials</label>
-                                  <input
-                                    type="text"
-                                    value={plan.materials}
-                                    onChange={(e) => handleWeekChange(idx, "materials", e.target.value)}
-                                    placeholder="e.g. Slide presentations chapter 4, Handbook of algorithms..."
-                                    className="w-full p-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 bg-white focus:outline-none focus:border-[#800000]"
-                                  />
-                                </div>
-
-                                {/* Alignment selection targeting CLOs */}
-                                <div className="md:col-span-2">
-                                  <span className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Map Course Learning Outcomes (CLO) for Week {plan.week}</span>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {courseOutcomes.map((clo) => {
-                                      const isAligned = plan.cloAlignment?.includes(clo.id);
-                                      return (
-                                        <button
-                                          type="button"
-                                          key={clo.id}
-                                          onClick={() => {
-                                            const current = plan.cloAlignment || [];
-                                            const updated = isAligned
-                                              ? current.filter(x => x !== clo.id)
-                                              : [...current, clo.id];
-                                            handleWeekChange(idx, "cloAlignment", updated);
-                                          }}
-                                          className={`px-2.5 py-1 text-[9px] font-bold rounded-lg border transition-all ${isAligned
-                                            ? "bg-amber-700 border-amber-700 text-white"
-                                            : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                                            }`}
-                                        >
-                                          {clo.id}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    ))}
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
         )}
+
+
 
         {/* Section E: Grading System */}
         {activeSection === "E" && (
@@ -1436,40 +1565,45 @@ export function SyllabusEditor({ syllabusId = null }) {
                 </div>
 
                 <div className="space-y-3">
-                  {gradingComponents.map((gc, idx) => (
-                    <div key={idx} className="flex gap-2.5 items-center">
-                      <input
-                        type="text"
-                        required
-                        value={gc.name}
-                        onChange={(e) => handleGradingChange(idx, "name", e.target.value)}
-                        placeholder="e.g. Laboratory Exams, Assignments"
-                        className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 focus:border-[#800000] focus:outline-none focus:ring-2 focus:ring-[#800000]/10 bg-white"
-                      />
-
-                      <div className="w-24 relative flex-shrink-0">
-                        <input
-                          type="number"
-                          required
-                          min="0"
-                          max="100"
-                          value={gc.percentage}
-                          onChange={(e) => handleGradingChange(idx, "percentage", e.target.value)}
-                          className="w-full pr-8 pl-3 py-2.5 rounded-xl border border-gray-200 text-xs font-black text-right focus:border-[#800000] focus:outline-none focus:ring-2 focus:ring-[#800000]/10 text-[#800000] bg-white"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">%</span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removeGradingComponent(idx)}
-                        disabled={gradingComponents.length === 1}
-                        className="p-2 border border-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-xl transition-colors disabled:opacity-30"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                  {gradingComponents.length === 0 ? (
+                    <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl text-xs font-semibold text-gray-400 bg-white">
+                      No grading parameters defined. Click "Add Evaluation Category" to start.
                     </div>
-                  ))}
+                  ) : (
+                    gradingComponents.map((gc, idx) => (
+                      <div key={idx} className="flex gap-2.5 items-center">
+                        <input
+                          type="text"
+                          required
+                          value={gc.name}
+                          onChange={(e) => handleGradingChange(idx, "name", e.target.value)}
+                          placeholder="e.g. Laboratory Exams, Assignments"
+                          className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 focus:border-[#800000] focus:outline-none focus:ring-2 focus:ring-[#800000]/10 bg-white"
+                        />
+
+                        <div className="w-24 relative flex-shrink-0">
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            max="100"
+                            value={gc.percentage}
+                            onChange={(e) => handleGradingChange(idx, "percentage", e.target.value)}
+                            className="w-full pr-8 pl-3 py-2.5 rounded-xl border border-gray-200 text-xs font-black text-right focus:border-[#800000] focus:outline-none focus:ring-2 focus:ring-[#800000]/10 text-[#800000] bg-white"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">%</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeGradingComponent(idx)}
+                          className="p-2 border border-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-xl transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <button
@@ -1571,67 +1705,71 @@ export function SyllabusEditor({ syllabusId = null }) {
             <span>{ocrStatusText}</span>
           </div>
         )}
-      </main>
 
-      {/* 3. Sticky Bottom FROSTED ACTIONS BAR */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-200 py-4 px-6 lg:px-12 flex items-center justify-between z-30 shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:block leading-tight">
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Editing Status</span>
-            <span className="text-xs font-bold text-gray-800 block mt-0.5">
-              {syllabusId ? "Modifying existing draft" : "Designing new canvas"}
+        {/* Action Controls Bar Contained inside the Main Card */}
+        <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="leading-tight">
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Editing Status</span>
+              <span className="text-xs font-bold text-gray-800 block mt-0.5">
+                {syllabusId ? "Modifying existing draft" : "Designing new canvas"}
+              </span>
+            </div>
+
+            <div className="h-6 w-px bg-gray-200" />
+
+            {/* Stepper buttons */}
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={navigatePrev}
+                disabled={activeSection === "A"}
+                className="p-2 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4.5 h-4.5" />
+              </button>
+              <button
+                type="button"
+                onClick={navigateNext}
+                disabled={activeSection === "E"}
+                className="p-2 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4.5 h-4.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Validation error message warning if grading invalid */}
+          {!isGradingValid && activeSection === "E" && (
+            <span className="hidden md:flex items-center gap-1 text-[10px] font-bold text-red-600 uppercase tracking-wider animate-pulse">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Cumulative grading must equal exactly 100% to submit</span>
             </span>
-          </div>
+          )}
 
-          <div className="h-6 w-px bg-gray-200 hidden sm:block" />
-
-          {/* Stepper buttons */}
-          <div className="flex gap-1.5">
+          <div className="flex gap-2.5">
             <button
-              onClick={navigatePrev}
-              disabled={activeSection === "A"}
-              className="p-2 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              type="button"
+              onClick={() => handleSave("draft")}
+              disabled={submitting}
+              className="px-4 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5"
             >
-              <ChevronLeft className="w-4.5 h-4.5" />
+              <Save className="w-4 h-4" />
+              <span>Save Draft</span>
             </button>
+
             <button
-              onClick={navigateNext}
-              disabled={activeSection === "E"}
-              className="p-2 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              type="button"
+              onClick={() => handleSave("submitted")}
+              disabled={submitting || !isGradingValid || !courseId}
+              className="px-5 py-2.5 bg-[#800000] hover:bg-red-900 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-red-800/10 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronRight className="w-4.5 h-4.5" />
+              <CheckCircle className="w-4 h-4" />
+              <span>Submit for Review</span>
             </button>
           </div>
         </div>
-
-        {/* Validation error message warning if grading invalid */}
-        {!isGradingValid && activeSection === "E" && (
-          <span className="hidden md:flex items-center gap-1 text-[10px] font-bold text-red-600 uppercase tracking-wider animate-pulse">
-            <AlertTriangle className="w-4 h-4" />
-            <span>Cumulative grading must equal exactly 100% to submit</span>
-          </span>
-        )}
-
-        <div className="flex gap-2.5">
-          <button
-            onClick={() => handleSave("draft")}
-            disabled={submitting}
-            className="px-4 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5"
-          >
-            <Save className="w-4 h-4" />
-            <span>Save Draft</span>
-          </button>
-
-          <button
-            onClick={() => handleSave("submitted")}
-            disabled={submitting || !isGradingValid || !courseId}
-            className="px-5 py-2.5 bg-[#800000] hover:bg-red-900 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-red-800/10 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CheckCircle className="w-4 h-4" />
-            <span>Submit for Review</span>
-          </button>
-        </div>
-      </footer>
+      </main>
     </div>
   );
 }

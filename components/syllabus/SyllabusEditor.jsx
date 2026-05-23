@@ -978,7 +978,7 @@ export function SyllabusEditor({ syllabusId = null }) {
               <div className="space-y-3">
                 {programOutcomes.length === 0 ? (
                   <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl text-xs font-semibold text-gray-400 bg-white">
-                    No Program Learning Outcomes defined. Click "+ Add PLO" to get started.
+                    No Program Learning Outcomes defined. Click &quot;+ Add PLO&quot; to get started.
                   </div>
                 ) : (
                   programOutcomes.map((plo, idx) => (
@@ -1015,6 +1015,67 @@ export function SyllabusEditor({ syllabusId = null }) {
                     </div>
                   ))
                 )}
+              </div>
+
+              {/* PLO to ILO Alignment Matrix */}
+              <div className="mt-4 space-y-2">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">PLO to ILO Alignment Matrix</span>
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50/50">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse bg-white">
+                      <thead>
+                        <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
+                          <th className="py-2.5 px-4 border w-36 text-left">Program Outcome (PLO)</th>
+                          {institutionalOutcomes.map((ilo, iloIdx) => {
+                            const iloName = typeof ilo === "object" ? ilo.name : ilo;
+                            return (
+                              <th key={iloIdx} className="py-2.5 px-3 border max-w-[150px] truncate" title={iloName}>
+                                {iloName || `ILO-${iloIdx + 1}`}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
+                        {programOutcomes.length === 0 ? (
+                          <tr>
+                            <td colSpan={institutionalOutcomes.length + 1} className="py-4 text-center text-gray-400 italic">
+                              No PLOs defined to align.
+                            </td>
+                          </tr>
+                        ) : (
+                          programOutcomes.map((plo, ploIdx) => (
+                            <tr key={plo.id} className="hover:bg-gray-50/50">
+                              <td className="py-2 px-4 border font-bold text-[#800000]" title={plo.description}>
+                                {plo.id}
+                              </td>
+                              {institutionalOutcomes.map((ilo, iloIdx) => {
+                                const iloName = typeof ilo === "object" ? ilo.name : ilo;
+                                return (
+                                  <td key={iloIdx} className="p-2 border text-center">
+                                    <input
+                                      type="checkbox"
+                                      disabled={!iloName}
+                                      checked={plo.alignments?.includes(iloName)}
+                                      onChange={() => {
+                                        const current = plo.alignments || [];
+                                        const updated = current.includes(iloName)
+                                          ? current.filter(x => x !== iloName)
+                                          : [...current, iloName];
+                                        updatePLO(ploIdx, "alignments", updated);
+                                      }}
+                                      className="w-4 h-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded cursor-pointer"
+                                    />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1076,6 +1137,60 @@ export function SyllabusEditor({ syllabusId = null }) {
                   ))
                 )}
               </div>
+
+              {/* CLO to PLO Alignment Matrix */}
+              <div className="mt-4 space-y-2">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">CLO to PLO Alignment Matrix</span>
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50/50">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse bg-white">
+                      <thead>
+                        <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
+                          <th className="py-2.5 px-4 border w-36 text-left">Course Outcome (CLO)</th>
+                          {programOutcomes.map((plo) => (
+                            <th key={plo.id} className="py-2.5 px-3 border max-w-[150px] truncate" title={plo.description}>
+                              {plo.id}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
+                        {courseOutcomes.length === 0 ? (
+                          <tr>
+                            <td colSpan={programOutcomes.length + 1} className="py-4 text-center text-gray-400 italic">
+                              No CLOs defined to align.
+                            </td>
+                          </tr>
+                        ) : (
+                          courseOutcomes.map((clo, cloIdx) => (
+                            <tr key={clo.id} className="hover:bg-gray-50/50">
+                              <td className="py-2 px-4 border font-bold text-amber-700" title={clo.description}>
+                                {clo.id}
+                              </td>
+                              {programOutcomes.map((plo) => (
+                                <td key={plo.id} className="p-2 border text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={clo.alignments?.includes(plo.id)}
+                                    onChange={() => {
+                                      const current = clo.alignments || [];
+                                      const updated = current.includes(plo.id)
+                                        ? current.filter(x => x !== plo.id)
+                                        : [...current, plo.id];
+                                      updateCLO(cloIdx, "alignments", updated);
+                                    }}
+                                    className="w-4 h-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded cursor-pointer"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* 3. Performance Indicators (PIs) */}
@@ -1136,133 +1251,10 @@ export function SyllabusEditor({ syllabusId = null }) {
                   ))
                 )}
               </div>
-            </div>
 
-            {/* OBE Outcomes Alignment Matrices */}
-            <div className="mt-8 pt-6 border-t border-gray-100 space-y-6">
-              <div>
-                <h4 className="text-sm font-extrabold text-gray-900 uppercase tracking-wide">OBE Outcomes Alignment Matrices</h4>
-                <p className="text-xs text-gray-400 font-semibold mt-0.5">Real-time outcomes-mapping validator grids</p>
-              </div>
-
-              {/* 1. PLO to ILO Matrix */}
-              <div className="space-y-3">
-                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">1. PLO to ILO Alignment Matrix</span>
-                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50/50">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse bg-white">
-                      <thead>
-                        <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
-                          <th className="py-2.5 px-4 border w-36 text-left">Program Outcome (PLO)</th>
-                          {institutionalOutcomes.map((ilo, iloIdx) => {
-                            const iloName = typeof ilo === "object" ? ilo.name : ilo;
-                            return (
-                              <th key={iloIdx} className="py-2.5 px-3 border max-w-[150px] truncate" title={iloName}>
-                                {iloName || `ILO-${iloIdx + 1}`}
-                              </th>
-                            );
-                          })}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
-                        {programOutcomes.length === 0 ? (
-                          <tr>
-                            <td colSpan={institutionalOutcomes.length + 1} className="py-4 text-center text-gray-400 italic">
-                              No PLOs defined to align.
-                            </td>
-                          </tr>
-                        ) : (
-                          programOutcomes.map((plo, ploIdx) => (
-                            <tr key={plo.id} className="hover:bg-gray-50/50">
-                              <td className="py-2 px-4 border font-bold text-[#800000]" title={plo.description}>
-                                {plo.id}
-                              </td>
-                              {institutionalOutcomes.map((ilo, iloIdx) => {
-                                const iloName = typeof ilo === "object" ? ilo.name : ilo;
-                                return (
-                                  <td key={iloIdx} className="p-2 border text-center">
-                                    <input
-                                      type="checkbox"
-                                      disabled={!iloName}
-                                      checked={plo.alignments?.includes(iloName)}
-                                      onChange={() => {
-                                        const current = plo.alignments || [];
-                                        const updated = current.includes(iloName)
-                                          ? current.filter(x => x !== iloName)
-                                          : [...current, iloName];
-                                        updatePLO(ploIdx, "alignments", updated);
-                                      }}
-                                      className="w-4 h-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded cursor-pointer"
-                                    />
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. CLO to PLO Matrix */}
-              <div className="space-y-3 pt-2">
-                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">2. CLO to PLO Alignment Matrix</span>
-                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50/50">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse bg-white">
-                      <thead>
-                        <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
-                          <th className="py-2.5 px-4 border w-36 text-left">Course Outcome (CLO)</th>
-                          {programOutcomes.map((plo) => (
-                            <th key={plo.id} className="py-2.5 px-3 border max-w-[150px] truncate" title={plo.description}>
-                              {plo.id}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
-                        {courseOutcomes.length === 0 ? (
-                          <tr>
-                            <td colSpan={programOutcomes.length + 1} className="py-4 text-center text-gray-400 italic">
-                              No CLOs defined to align.
-                            </td>
-                          </tr>
-                        ) : (
-                          courseOutcomes.map((clo, cloIdx) => (
-                            <tr key={clo.id} className="hover:bg-gray-50/50">
-                              <td className="py-2 px-4 border font-bold text-amber-700" title={clo.description}>
-                                {clo.id}
-                              </td>
-                              {programOutcomes.map((plo) => (
-                                <td key={plo.id} className="p-2 border text-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={clo.alignments?.includes(plo.id)}
-                                    onChange={() => {
-                                      const current = clo.alignments || [];
-                                      const updated = current.includes(plo.id)
-                                        ? current.filter(x => x !== plo.id)
-                                        : [...current, plo.id];
-                                      updateCLO(cloIdx, "alignments", updated);
-                                    }}
-                                    className="w-4 h-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded cursor-pointer"
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. PI to PLO Matrix */}
-              <div className="space-y-3 pt-2">
-                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">3. PI to PLO Alignment Matrix</span>
+              {/* PI to PLO Alignment Matrix */}
+              <div className="mt-4 space-y-2">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">PI to PLO Alignment Matrix</span>
                 <div className="border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50/50">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse bg-white">
@@ -1340,7 +1332,7 @@ export function SyllabusEditor({ syllabusId = null }) {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse" style={{ minWidth: "1100px" }}>
                   <thead>
-                    {/* Title Row — not editable */}
+                    {/* A. Title Row — not editable */}
                     <tr className="bg-[#800000]">
                       <th colSpan={9} className="py-3 px-5 text-center text-xs font-black uppercase tracking-widest text-white">
                         OUTCOMES-BASED TEACHING AND LEARNING PLAN (OBTL PLAN)
@@ -1349,41 +1341,36 @@ export function SyllabusEditor({ syllabusId = null }) {
 
                     {/* Main column group headers */}
                     <tr className="bg-gray-50 text-[9px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
-                      {/* B. Week */}
-                      <th className="py-2.5 px-3 border border-gray-200 w-16">B.<br />Week</th>
-                      {/* C. DLOs */}
-                      <th className="py-2.5 px-3 border border-gray-200 min-w-[140px]">C.<br />Desired Learning Outcomes (DLOs)</th>
-                      {/* D. Learning Content */}
-                      <th className="py-2.5 px-3 border border-gray-200 min-w-[140px]">D.<br />Learning Content / Topics</th>
+                      {/* B. Week — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 w-16 align-middle">B.<br />Week</th>
+                      {/* C. DLOs — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[140px] align-middle">C.<br />Desired Learning Outcomes (DLOs)</th>
+                      {/* D. Learning Content — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[140px] align-middle">D.<br />Learning Content / Topics</th>
                       {/* E. Instructional Delivery Design — spans 3 sub-columns */}
                       <th colSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[360px]">E. Instructional Delivery Design</th>
-                      {/* F. Assessment */}
-                      <th className="py-2.5 px-3 border border-gray-200 min-w-[120px]">F.<br />Assessment</th>
-                      {/* G. CLO Alignment */}
-                      <th className="py-2.5 px-3 border border-gray-200 min-w-[100px]">G.<br />Alignment to CLOs</th>
-                      {/* Actions */}
-                      <th className="py-2.5 px-3 border border-gray-200 w-12"></th>
+                      {/* F. Assessment — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[120px] align-middle">F.<br />Assessment</th>
+                      {/* G. CLO Alignment — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[100px] align-middle">G.<br />Alignment to CLOs</th>
+                      {/* Actions — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 w-12 align-middle"></th>
                     </tr>
 
-                    {/* Sub-headers for E */}
+                    {/* E sub-group headers: E.1 and E.2 */}
                     <tr className="bg-gray-50/70 text-[9px] font-bold uppercase text-gray-400 tracking-wider border-b border-gray-200 text-center">
-                      {/* empty cells for B, C, D */}
-                      <th className="border border-gray-200 py-1.5"></th>
-                      <th className="border border-gray-200 py-1.5"></th>
-                      <th className="border border-gray-200 py-1.5"></th>
-                      {/* E sub-columns */}
-                      <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">E.1<br />Face-to-face</th>
-                      <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">
-                        E.2 FLTAs<br />
-                        <span className="text-[8px] normal-case font-semibold text-gray-300">Flexible Learning &amp; Teaching</span>
-                        <br />
-                        E.2.1 Synchronous
+                      {/* E.1 Face-to-face — spans 2 sub-header rows */}
+                      <th rowSpan={2} className="border border-gray-200 py-1.5 px-2 min-w-[120px] align-middle">E.1<br />Face-to-face</th>
+                      {/* E.2 FLTAs — spans 2 sub-columns */}
+                      <th colSpan={2} className="border border-gray-200 py-1.5 px-2 min-w-[240px]">
+                        E.2 Flexible Learning &amp; Teaching Activities (FLTAs)
                       </th>
+                    </tr>
+
+                    {/* E.2 sub-columns: E.2.1 and E.2.2 */}
+                    <tr className="bg-gray-50/50 text-[8px] font-bold uppercase text-gray-400 tracking-wider border-b border-gray-200 text-center">
+                      <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">E.2.1<br />Synchronous</th>
                       <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">E.2.2<br />Asynchronous</th>
-                      {/* empty cells for F, G, Actions */}
-                      <th className="border border-gray-200 py-1.5"></th>
-                      <th className="border border-gray-200 py-1.5"></th>
-                      <th className="border border-gray-200 py-1.5"></th>
                     </tr>
                   </thead>
 

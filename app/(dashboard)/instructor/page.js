@@ -167,13 +167,13 @@ export default async function InstructorDashboard() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        {item.status === "draft" || item.status === "rejected" ? (
+                        {item.status === "draft" || item.status === "rejected" || item.status === "submitted" ? (
                           <Link
                             href={`/instructor/syllabi/${item.id}/edit`}
                             className="p-1.5 rounded-lg border border-red-100 hover:bg-red-50 text-red-700 hover:text-red-800 transition-colors flex items-center gap-1.5 text-xs font-semibold"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
-                            <span>Edit Draft</span>
+                            <span>Edit</span>
                           </Link>
                         ) : (
                           <Link

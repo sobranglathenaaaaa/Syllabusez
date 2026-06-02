@@ -38,14 +38,7 @@ const DEFAULT_PUP_MISSION = `Ensuring inclusive and equitable quality education 
 
 const DEFAULT_PUP_QUALITY_POLICY = `The Polytechnic University of the Philippines commits to provide inclusive and equitable quality education and promote lifelong learning opportunities for human advancement and social transformation through re-engineered polytechnic academic programs. Toward this end, we, the members of the PUP Community will vigorously and steadfastly endeavor to continuously improve the standard of university services to the satisfaction of our clients through the adoption and continuous review of our Quality Management System.`;
 
-const DEFAULT_ILOS = [
-  "Academic Excellence",
-  "Empowered faculty members and employees",
-  "Commitment in research engagement",
-  "Evidence-based outreach and extension programs",
-  "State-of-the-art knowledge management",
-  "Enduring Academic Community"
-];
+const DEFAULT_ILOS = [];
 
 export function SyllabusEditor({ syllabusId = null }) {
   const router = useRouter();
@@ -954,7 +947,7 @@ export function SyllabusEditor({ syllabusId = null }) {
             <div className="border-b border-gray-100 pb-3 flex justify-between items-center">
               <div>
                 <h3 className="text-base font-extrabold text-gray-900 uppercase tracking-wide">C. Outcomes Mapping Alignment Canvas</h3>
-                <p className="text-xs font-semibold text-gray-400 mt-0.5 uppercase tracking-widest">Integrated Bloom's Taxonomy Alignment</p>
+                <p className="text-xs font-semibold text-gray-400 mt-0.5 uppercase tracking-widest">IntegratedAdd Institutional OutcomeAlignment</p>
               </div>
             </div>
 
@@ -1330,7 +1323,7 @@ export function SyllabusEditor({ syllabusId = null }) {
             {/* OBTL Table */}
             <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-inner bg-gray-50/50">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse" style={{ minWidth: "1100px" }}>
+                <table className="w-full text-left border-collapse table-fixed">
                   <thead>
                     {/* A. Title Row — not editable */}
                     <tr className="bg-[#800000]">
@@ -1341,18 +1334,18 @@ export function SyllabusEditor({ syllabusId = null }) {
 
                     {/* Main column group headers */}
                     <tr className="bg-gray-50 text-[9px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
-                      {/* B. Week — spans 3 header rows */}
-                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 w-16 align-middle">B.<br />Week</th>
-                      {/* C. DLOs — spans 3 header rows */}
-                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[140px] align-middle">C.<br />Desired Learning Outcomes (DLOs)</th>
-                      {/* D. Learning Content — spans 3 header rows */}
-                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[140px] align-middle">D.<br />Learning Content / Topics</th>
-                      {/* E. Instructional Delivery Design — spans 3 sub-columns */}
-                      <th colSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[360px]">E. Instructional Delivery Design</th>
-                      {/* F. Assessment — spans 3 header rows */}
-                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[120px] align-middle">F.<br />Assessment</th>
-                      {/* G. CLO Alignment — spans 3 header rows */}
-                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 min-w-[100px] align-middle">G.<br />Alignment to CLOs</th>
+                      {/* Week — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 w-16 align-middle">Week</th>
+                      {/* DLOs — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 align-middle"><br />Desired Learning Outcomes (DLOs)</th>
+                      {/* Learning Content — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 align-middle"><br />Learning Content / Topics</th>
+                      {/* Instructional Delivery Design — spans 3 sub-columns */}
+                      <th colSpan={3} className="py-2.5 px-3 border border-gray-200">Instructional Delivery Design</th>
+                      {/* Assessment — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 align-middle"><br />Assessment</th>
+                      {/* CLO Alignment — spans 3 header rows */}
+                      <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 align-middle"><br />Alignment to CLOs</th>
                       {/* Actions — spans 3 header rows */}
                       <th rowSpan={3} className="py-2.5 px-3 border border-gray-200 w-12 align-middle"></th>
                     </tr>
@@ -1360,17 +1353,17 @@ export function SyllabusEditor({ syllabusId = null }) {
                     {/* E sub-group headers: E.1 and E.2 */}
                     <tr className="bg-gray-50/70 text-[9px] font-bold uppercase text-gray-400 tracking-wider border-b border-gray-200 text-center">
                       {/* E.1 Face-to-face — spans 2 sub-header rows */}
-                      <th rowSpan={2} className="border border-gray-200 py-1.5 px-2 min-w-[120px] align-middle">E.1<br />Face-to-face</th>
+                      <th rowSpan={2} className="border border-gray-200 py-1.5 px-2 align-middle"><br />Face-to-face</th>
                       {/* E.2 FLTAs — spans 2 sub-columns */}
-                      <th colSpan={2} className="border border-gray-200 py-1.5 px-2 min-w-[240px]">
-                        E.2 Flexible Learning &amp; Teaching Activities (FLTAs)
+                      <th colSpan={2} className="border border-gray-200 py-1.5 px-2">
+                        Flexible Learning &amp; Teaching Activities (FLTAs)
                       </th>
                     </tr>
 
                     {/* E.2 sub-columns: E.2.1 and E.2.2 */}
                     <tr className="bg-gray-50/50 text-[8px] font-bold uppercase text-gray-400 tracking-wider border-b border-gray-200 text-center">
-                      <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">E.2.1<br />Synchronous</th>
-                      <th className="border border-gray-200 py-1.5 px-2 min-w-[120px]">E.2.2<br />Asynchronous</th>
+                      <th className="border border-gray-200 py-1.5 px-2"><br />Synchronous</th>
+                      <th className="border border-gray-200 py-1.5 px-2"><br />Asynchronous</th>
                     </tr>
                   </thead>
 
@@ -1387,11 +1380,10 @@ export function SyllabusEditor({ syllabusId = null }) {
 
                           {/* B. Week */}
                           <td className="py-2.5 px-3 border border-gray-100 text-center align-middle">
-                            <span className={`px-2 py-1 text-[10px] font-black rounded-lg inline-block ${
-                              idx % 2 === 0
-                                ? "bg-[#800000]/10 text-[#800000]"
-                                : "bg-amber-600/10 text-amber-700"
-                            }`}>
+                            <span className={`px-2 py-1 text-[10px] font-black rounded-lg inline-block ${idx % 2 === 0
+                              ? "bg-[#800000]/10 text-[#800000]"
+                              : "bg-amber-600/10 text-amber-700"
+                              }`}>
                               {plan.week}
                             </span>
                           </td>
@@ -1484,7 +1476,7 @@ export function SyllabusEditor({ syllabusId = null }) {
                                       className={`px-1.5 py-0.5 text-[9px] font-bold rounded border transition-all ${isAligned
                                         ? "bg-amber-700 border-amber-700 text-white"
                                         : "bg-white border-gray-200 text-gray-400 hover:border-gray-400"
-                                      }`}
+                                        }`}
                                     >
                                       {clo.id}
                                     </button>

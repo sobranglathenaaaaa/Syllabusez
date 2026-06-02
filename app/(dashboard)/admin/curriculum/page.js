@@ -36,17 +36,17 @@ export default function AdminCurriculumPage() {
 
   const fetchMetadata = async () => {
     try {
-      const deptRes = await fetch("/api/departments");
+      const deptRes = await fetch("/api/programs");
       const deptData = await deptRes.json();
-      setDepartments(deptData.departments || []);
+      setDepartments(deptData.programs || []);
 
       const currRes = await fetch("/api/curriculum");
       const currData = await currRes.json();
 
-      // Map curricula records by department_id
+      // Map curricula records by program_id
       const curriculaMap = {};
       currData.curricula?.forEach(c => {
-        curriculaMap[c.department_id] = c;
+        curriculaMap[c.program_id] = c;
       });
       setCustomCurricula(curriculaMap);
     } catch (error) {
@@ -92,7 +92,7 @@ export default function AdminCurriculumPage() {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("departmentId", deptId);
+    formData.append("programId", deptId);
 
     try {
       const res = await fetch("/api/curriculum", {
@@ -130,7 +130,7 @@ export default function AdminCurriculumPage() {
     }
 
     try {
-      const res = await fetch(`/api/curriculum?departmentId=${deptId}`, {
+      const res = await fetch(`/api/curriculum?programId=${deptId}`, {
         method: "DELETE"
       });
 

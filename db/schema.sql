@@ -46,7 +46,6 @@ CREATE TABLE `courses` (
   `title` text NOT NULL,
   `units` int(11) NOT NULL CHECK (`units` > 0),
   `program_id` varchar(36) DEFAULT NULL,
-  `department_id` varchar(36) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -55,7 +54,7 @@ CREATE TABLE `courses` (
 -- Table structure for table `curricula`
 
 CREATE TABLE `curricula` (
-  `department_id` varchar(255) NOT NULL,
+  `program_id` varchar(255) NOT NULL,
   `file_name` varchar(255) NOT NULL,
   `file_type` varchar(100) NOT NULL,
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -63,15 +62,7 @@ CREATE TABLE `curricula` (
 
 -- --------------------------------------------------------
 
--- Table structure for table `departments`
 
-CREATE TABLE `departments` (
-  `id` varchar(36) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
 
 -- Table structure for table `enrollments`
 
@@ -182,17 +173,11 @@ ALTER TABLE `activity_logs`
 ALTER TABLE `courses`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `code` (`code`),
-  ADD KEY `program_id` (`program_id`),
-  ADD KEY `department_id` (`department_id`);
+  ADD KEY `program_id` (`program_id`);
 
 -- Indexes for table `curricula`
 ALTER TABLE `curricula`
-  ADD PRIMARY KEY (`department_id`);
-
--- Indexes for table `departments`
-ALTER TABLE `departments`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `name` (`name`);
+  ADD PRIMARY KEY (`program_id`);
 
 -- Indexes for table `enrollments`
 ALTER TABLE `enrollments`
@@ -244,12 +229,11 @@ ALTER TABLE `activity_logs`
 
 -- Constraints for table `courses`
 ALTER TABLE `courses`
-  ADD CONSTRAINT `courses_ibfk_1` FOREIGN KEY (`program_id`) REFERENCES `programs` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `courses_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `courses_ibfk_1` FOREIGN KEY (`program_id`) REFERENCES `programs` (`id`) ON DELETE SET NULL;
 
 -- Constraints for table `curricula`
 ALTER TABLE `curricula`
-  ADD CONSTRAINT `curricula_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `curricula_ibfk_1` FOREIGN KEY (`program_id`) REFERENCES `programs` (`id`) ON DELETE CASCADE;
 
 -- Constraints for table `enrollments`
 ALTER TABLE `enrollments`

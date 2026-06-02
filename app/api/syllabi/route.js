@@ -9,12 +9,12 @@ export async function GET(request) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
     const instructorId = searchParams.get("instructorId") || "";
-    const departmentId = searchParams.get("departmentId") || "";
+    const programId = searchParams.get("programId") || searchParams.get("departmentId") || "";
     const courseId = searchParams.get("courseId") || "";
 
     let sql = `
       SELECT s.id, s.course_id, s.instructor_id, s.status, s.version, s.updated_at,
-             c.code, c.title as course_title, c.units, c.department_id,
+             c.code, c.title as course_title, c.units, c.program_id,
              p.full_name as instructor_name, p.email as instructor_email
       FROM syllabi s
       LEFT JOIN courses c ON s.course_id = c.id
@@ -38,9 +38,9 @@ export async function GET(request) {
       params.push(instructorId);
     }
 
-    if (departmentId) {
-      sql += " AND c.department_id = ?";
-      params.push(departmentId);
+    if (programId) {
+      sql += " AND c.program_id = ?";
+      params.push(programId);
     }
 
     if (courseId) {

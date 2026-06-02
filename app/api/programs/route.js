@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const courses = await query("SELECT id, code, title, units, program_id FROM courses ORDER BY code ASC");
-    return NextResponse.json({ courses });
+    const programs = await query("SELECT id, name FROM programs ORDER BY name ASC");
+    return NextResponse.json({ programs });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

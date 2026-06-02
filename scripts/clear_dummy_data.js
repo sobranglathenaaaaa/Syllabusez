@@ -19,7 +19,7 @@ export async function clearDummyData() {
     await query("DELETE FROM syllabi");
     await query("DELETE FROM enrollments");
     await query("DELETE FROM courses");
-    await query("DELETE FROM departments");
+    await query("DELETE FROM programs");
     await query("DELETE FROM users");
 
     // Re‑enable FK checks

@@ -24,10 +24,10 @@ export default function CurriculumPage() {
 
   const fetchMetadata = async () => {
     try {
-      // 1. Fetch all academic departments
-      const deptRes = await fetch("/api/departments");
+      // 1. Fetch all academic programs
+      const deptRes = await fetch("/api/programs");
       const deptData = await deptRes.json();
-      const depts = deptData.departments || [];
+      const depts = deptData.programs || [];
       setDepartments(depts);
 
       // Default selected department to Bachelor of Science in Information Technology (BSIT)
@@ -43,7 +43,7 @@ export default function CurriculumPage() {
       const currData = await currRes.json();
       const curriculaMap = {};
       currData.curricula?.forEach(c => {
-        curriculaMap[c.department_id] = c;
+        curriculaMap[c.program_id] = c;
       });
       setCustomCurricula(curriculaMap);
     } catch (error) {

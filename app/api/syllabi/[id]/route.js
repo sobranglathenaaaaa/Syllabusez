@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
               s.course_description, s.prerequisites, s.corequisites, s.semester, s.academic_year,
               s.vision, s.mission, s.quality_policy, s.institutional_outcomes,
               s.program_outcomes, s.course_outcomes, s.performance_indicators,
-              c.code, c.title, c.units, c.department_id,
+              c.code, c.title, c.units, c.program_id,
               p.full_name as instructor_name, p.email as instructor_email
        FROM syllabi s
        LEFT JOIN courses c ON s.course_id = c.id

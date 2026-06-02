@@ -25,10 +25,10 @@ export function AdminDashboardContent() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch departments
-      const deptsRes = await fetch("/api/departments");
+      // Fetch programs
+      const deptsRes = await fetch("/api/programs");
       const deptsData = await deptsRes.json();
-      setDepartments(deptsData.departments || []);
+      setDepartments(deptsData.programs || []);
 
       // Fetch all courses
       const coursesRes = await fetch("/api/courses");
@@ -37,7 +37,7 @@ export function AdminDashboardContent() {
 
       // Fetch pending syllabi
       const params = new URLSearchParams({ status: "submitted" });
-      if (selectedDept) params.set("departmentId", selectedDept);
+      if (selectedDept) params.set("programId", selectedDept);
       if (selectedCourse) params.set("courseId", selectedCourse);
       
       const syllabiRes = await fetch(`/api/syllabi?${params.toString()}`);
@@ -100,9 +100,9 @@ export function AdminDashboardContent() {
     setCommentModalOpen(true);
   };
 
-  // Filtered courses dropdown based on selected program/dept
+  // Filtered courses dropdown based on selected program
   const filteredCoursesDropdown = selectedDept
-    ? courses.filter(c => c.department_id === selectedDept)
+    ? courses.filter(c => c.program_id === selectedDept)
     : courses;
 
   return (
@@ -111,7 +111,7 @@ export function AdminDashboardContent() {
       <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-bold text-gray-900">Pending Syllabus Approvals</h3>
-          <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Department Review Panel</p>
+          <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Program Review Panel</p>
         </div>
 
         {/* Dropdowns */}
@@ -125,7 +125,7 @@ export function AdminDashboardContent() {
               }}
               className="w-full sm:w-56 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/10 bg-white"
             >
-              <option value="">All Programs/Depts</option>
+              <option value="">All Programs</option>
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>
                   {dept.name.split(" (")[0] || dept.name}

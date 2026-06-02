@@ -128,9 +128,9 @@ export function SyllabusEditor({ syllabusId = null }) {
   useEffect(() => {
     const initData = async () => {
       try {
-        const deptRes = await fetch("/api/departments");
+        const deptRes = await fetch("/api/programs");
         const deptData = await deptRes.json();
-        setDepartments(deptData.departments || []);
+        setDepartments(deptData.programs || []);
 
         const courseRes = await fetch("/api/courses");
         const courseData = await courseRes.json();
@@ -144,10 +144,10 @@ export function SyllabusEditor({ syllabusId = null }) {
 
           if (s) {
             setCourseId(s.course_id);
-            // Match the department
+            // Match the program
             const matchedCourse = courseData.courses?.find(c => c.id === s.course_id);
             if (matchedCourse) {
-              setSelectedDept(matchedCourse.department_id);
+              setSelectedDept(matchedCourse.program_id);
             }
 
             setCourseDescription(s.course_description || "");
@@ -199,9 +199,9 @@ export function SyllabusEditor({ syllabusId = null }) {
     initData();
   }, [syllabusId]);
 
-  // Filter courses based on selected department
+  // Filter courses based on selected program
   const filteredCoursesDropdown = selectedDept
-    ? courses.filter(c => c.department_id === selectedDept)
+    ? courses.filter(c => c.program_id === selectedDept)
     : courses;
 
   // Selected course model helper
@@ -676,7 +676,7 @@ export function SyllabusEditor({ syllabusId = null }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {/* Department Dropdown */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Academic Program / Dept</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Academic Program</label>
                 <select
                   value={selectedDept}
                   onChange={(e) => {
@@ -1039,8 +1039,9 @@ export function SyllabusEditor({ syllabusId = null }) {
                         ) : (
                           programOutcomes.map((plo, ploIdx) => (
                             <tr key={plo.id} className="hover:bg-gray-50/50">
-                              <td className="py-2 px-4 border font-bold text-[#800000]" title={plo.description}>
-                                {plo.id}
+                              <td className="py-2.5 px-4 border font-semibold text-gray-700 max-w-[300px]" title={plo.id}>
+                                <div className="text-[10px] font-black text-[#800000] mb-0.5">{plo.id}</div>
+                                <div className="leading-relaxed text-[11px]">{plo.description || <span className="text-gray-400 italic">No description</span>}</div>
                               </td>
                               {institutionalOutcomes.map((ilo, iloIdx) => {
                                 const iloName = typeof ilo === "object" ? ilo.name : ilo;
@@ -1139,10 +1140,13 @@ export function SyllabusEditor({ syllabusId = null }) {
                     <table className="w-full text-left border-collapse bg-white">
                       <thead>
                         <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
-                          <th className="py-2.5 px-4 border w-36 text-left">Course Outcome (CLO)</th>
+                          <th className="py-2.5 px-4 border w-48 text-left">Course Outcome (CLO)</th>
                           {programOutcomes.map((plo) => (
-                            <th key={plo.id} className="py-2.5 px-3 border max-w-[150px] truncate" title={plo.description}>
-                              {plo.id}
+                            <th key={plo.id} className="py-2.5 px-3 border min-w-[150px] max-w-[220px] text-xs font-semibold" title={plo.id}>
+                              <div className="text-[9px] font-black text-[#800000]">{plo.id}</div>
+                              <div className="normal-case font-medium text-gray-500 mt-0.5 leading-snug line-clamp-3" title={plo.description}>
+                                {plo.description}
+                              </div>
                             </th>
                           ))}
                         </tr>
@@ -1157,8 +1161,9 @@ export function SyllabusEditor({ syllabusId = null }) {
                         ) : (
                           courseOutcomes.map((clo, cloIdx) => (
                             <tr key={clo.id} className="hover:bg-gray-50/50">
-                              <td className="py-2 px-4 border font-bold text-amber-700" title={clo.description}>
-                                {clo.id}
+                              <td className="py-2.5 px-4 border font-semibold text-gray-700 max-w-[300px]" title={clo.id}>
+                                <div className="text-[10px] font-black text-amber-700 mb-0.5">{clo.id}</div>
+                                <div className="leading-relaxed text-[11px]">{clo.description || <span className="text-gray-400 italic">No description</span>}</div>
                               </td>
                               {programOutcomes.map((plo) => (
                                 <td key={plo.id} className="p-2 border text-center">
@@ -1253,10 +1258,13 @@ export function SyllabusEditor({ syllabusId = null }) {
                     <table className="w-full text-left border-collapse bg-white">
                       <thead>
                         <tr className="bg-gray-50 text-[10px] font-black uppercase text-gray-500 tracking-wider border-b border-gray-200 text-center">
-                          <th className="py-2.5 px-4 border w-36 text-left">Performance Indicator (PI)</th>
+                          <th className="py-2.5 px-4 border w-48 text-left">Performance Indicator (PI)</th>
                           {programOutcomes.map((plo) => (
-                            <th key={plo.id} className="py-2.5 px-3 border max-w-[150px] truncate" title={plo.description}>
-                              {plo.id}
+                            <th key={plo.id} className="py-2.5 px-3 border min-w-[150px] max-w-[220px] text-xs font-semibold" title={plo.id}>
+                              <div className="text-[9px] font-black text-[#800000]">{plo.id}</div>
+                              <div className="normal-case font-medium text-gray-500 mt-0.5 leading-snug line-clamp-3" title={plo.description}>
+                                {plo.description}
+                              </div>
                             </th>
                           ))}
                         </tr>
@@ -1271,8 +1279,9 @@ export function SyllabusEditor({ syllabusId = null }) {
                         ) : (
                           performanceIndicators.map((pi, piIdx) => (
                             <tr key={pi.id} className="hover:bg-gray-50/50">
-                              <td className="py-2 px-4 border font-bold text-indigo-700" title={pi.description}>
-                                {pi.id}
+                              <td className="py-2.5 px-4 border font-semibold text-gray-700 max-w-[300px]" title={pi.id}>
+                                <div className="text-[10px] font-black text-indigo-700 mb-0.5">{pi.id}</div>
+                                <div className="leading-relaxed text-[11px]">{pi.description || <span className="text-gray-400 italic">No description</span>}</div>
                               </td>
                               {programOutcomes.map((plo) => (
                                 <td key={plo.id} className="p-2 border text-center">
@@ -1394,7 +1403,7 @@ export function SyllabusEditor({ syllabusId = null }) {
                               rows={3}
                               value={plan.desiredLearningOutcomes}
                               onChange={(e) => handleWeekChange(idx, "desiredLearningOutcomes", e.target.value)}
-                              placeholder="Bloom's taxonomy learning outcomes..."
+                              placeholder="Desired learning outcomes..."
                               className="w-full text-[11px] font-medium text-gray-700 bg-transparent border-0 focus:ring-0 resize-none p-0 placeholder-gray-300"
                             />
                           </td>
@@ -1635,54 +1644,58 @@ export function SyllabusEditor({ syllabusId = null }) {
         )}
 
         {/* OCR Auto-fill Trigger Widget (always at bottom of active layout section to provide aid) */}
-        <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50 p-5 rounded-2xl border border-gray-100">
-          <div className="space-y-1">
-            <span className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#800000]" />
-              <span>Smart Printed OCR Syllabus Auto-fill</span>
-            </span>
-            <p className="text-[10px] text-gray-500 leading-relaxed max-w-xl font-medium">
-              Have a screenshot of an existing syllabus? Upload it to auto-extract weekly outlines, outcomes parameters, and grading structures directly into this builder canvas.
-            </p>
-          </div>
+        {activeSection !== "A" && activeSection !== "B" && (
+          <>
+            <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50 p-5 rounded-2xl border border-gray-100">
+              <div className="space-y-1">
+                <span className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-[#800000]" />
+                  <span>Smart Printed OCR Syllabus Auto-fill</span>
+                </span>
+                <p className="text-[10px] text-gray-500 leading-relaxed max-w-xl font-medium">
+                  Have a screenshot of an existing syllabus? Upload it to auto-extract weekly outlines, outcomes parameters, and grading structures directly into this builder canvas.
+                </p>
+              </div>
 
-          <label className="flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-[#800000]/30 hover:border-[#800000] hover:bg-[#800000]/5 text-[#800000] rounded-xl font-bold text-xs cursor-pointer transition-all">
-            <ImageIcon className="w-4 h-4" />
-            <span>Select Image</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleOcrUpload}
-              disabled={ocrLoading}
-              className="hidden"
-            />
-          </label>
-        </div>
-
-        {/* OCR loading status indicators */}
-        {ocrLoading && (
-          <div className="mt-4 p-4 border border-gray-100 rounded-xl bg-white space-y-2">
-            <div className="flex justify-between items-center text-xs font-semibold text-gray-600">
-              <span>{ocrStatusText}</span>
-              <span>{ocrProgress}%</span>
+              <label className="flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-[#800000]/30 hover:border-[#800000] hover:bg-[#800000]/5 text-[#800000] rounded-xl font-bold text-xs cursor-pointer transition-all">
+                <ImageIcon className="w-4 h-4" />
+                <span>Select Image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleOcrUpload}
+                  disabled={ocrLoading}
+                  className="hidden"
+                />
+              </label>
             </div>
-            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#800000] transition-all duration-300"
-                style={{ width: `${ocrProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
 
-        {!ocrLoading && ocrStatusText && (
-          <div className={`mt-4 p-3 border rounded-xl flex items-center gap-2 text-xs font-semibold ${ocrSuccess
-            ? "bg-green-50 border-green-200 text-green-800"
-            : "bg-red-50 border-red-200 text-red-800"
-            }`}>
-            <Check className="w-4 h-4" />
-            <span>{ocrStatusText}</span>
-          </div>
+            {/* OCR loading status indicators */}
+            {ocrLoading && (
+              <div className="mt-4 p-4 border border-gray-100 rounded-xl bg-white space-y-2">
+                <div className="flex justify-between items-center text-xs font-semibold text-gray-600">
+                  <span>{ocrStatusText}</span>
+                  <span>{ocrProgress}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#800000] transition-all duration-300"
+                    style={{ width: `${ocrProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {!ocrLoading && ocrStatusText && (
+              <div className={`mt-4 p-3 border rounded-xl flex items-center gap-2 text-xs font-semibold ${ocrSuccess
+                ? "bg-green-50 border-green-200 text-green-800"
+                : "bg-red-50 border-red-200 text-red-800"
+                }`}>
+                <Check className="w-4 h-4" />
+                <span>{ocrStatusText}</span>
+              </div>
+            )}
+          </>
         )}
 
         {/* Action Controls Bar Contained inside the Main Card */}

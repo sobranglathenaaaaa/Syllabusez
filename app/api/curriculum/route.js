@@ -8,11 +8,11 @@ async function ensureTableExists() {
   try {
     await query(`
       CREATE TABLE IF NOT EXISTS curricula (
-        department_id VARCHAR(255) PRIMARY KEY,
+        program_id VARCHAR(255) PRIMARY KEY,
         file_name VARCHAR(255) NOT NULL,
         file_type VARCHAR(100) NOT NULL,
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
+        FOREIGN KEY (program_id) REFERENCES programs(id) ON DELETE CASCADE
       )
     `);
   } catch (err) {
@@ -35,9 +35,9 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
-    const departmentId = formData.get("departmentId");
+    const programId = formData.get("programId") || formData.get("departmentId"); // handle fallback for legacy UI requests
 
-    if (!file || !departmentId) {
+    if (!file || !programId) {
       return NextResponse.json({ error: "Missing required file or program parameter." }, { status: 400 });
     }
 
@@ -52,19 +52,19 @@ export async function POST(request) {
     }
 
     // Normalize filename and save to public assets directory
-    // Using a sanitized pattern: [departmentId]_[filename] to ensure uniqueness per program
+    // Using a sanitized pattern: [programId]_[filename] to ensure uniqueness per program
     const safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    const uniqueFileName = `${departmentId}_${safeFileName}`;
+    const uniqueFileName = `${programId}_${safeFileName}`;
     const filePath = path.join(uploadDir, uniqueFileName);
     
     fs.writeFileSync(filePath, buffer);
 
     // Save metadata in SQL curricula table
     await query(
-      `INSERT INTO curricula (department_id, file_name, file_type) 
+      `INSERT INTO curricula (program_id, file_name, file_type) 
        VALUES (?, ?, ?) 
        ON DUPLICATE KEY UPDATE file_name = ?, file_type = ?, uploaded_at = CURRENT_TIMESTAMP`,
-      [departmentId, safeFileName, file.type, safeFileName, file.type]
+      [programId, safeFileName, file.type, safeFileName, file.type]
     );
 
     return NextResponse.json({ 
@@ -81,17 +81,17 @@ export async function POST(request) {
 export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const departmentId = searchParams.get("departmentId");
+    const programId = searchParams.get("programId") || searchParams.get("departmentId");
 
-    if (!departmentId) {
-      return NextResponse.json({ error: "Missing department ID parameter." }, { status: 400 });
+    if (!programId) {
+      return NextResponse.json({ error: "Missing program ID parameter." }, { status: 400 });
     }
 
     // Retrieve file name to clean up public disk file
-    const rows = await query("SELECT file_name FROM curricula WHERE department_id = ?", [departmentId]);
+    const rows = await query("SELECT file_name FROM curricula WHERE program_id = ?", [programId]);
     if (rows.length > 0) {
       const fileName = rows[0].file_name;
-      const uniqueFileName = `${departmentId}_${fileName}`;
+      const uniqueFileName = `${programId}_${fileName}`;
       const filePath = path.join(process.cwd(), "public", "uploads", "curricula", uniqueFileName);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -99,7 +99,7 @@ export async function DELETE(request) {
     }
 
     // Delete database metadata
-    await query("DELETE FROM curricula WHERE department_id = ?", [departmentId]);
+    await query("DELETE FROM curricula WHERE program_id = ?", [programId]);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

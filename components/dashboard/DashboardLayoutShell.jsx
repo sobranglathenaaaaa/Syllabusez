@@ -27,9 +27,17 @@ export function DashboardLayoutShell({ user, children }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
+  // Dynamic sample notifications based on role
+function getNotifications() {
+  // Sample static notifications; replace with real data fetching as needed
+  return [
+    { id: 1, text: "Welcome to the dashboard!", time: "Just now", read: false },
+    { id: 2, text: "Your profile was updated.", time: "5 mins ago", read: true },
+  ];
+}
 
 
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(getNotifications());
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAllAsRead = () => {
@@ -105,8 +113,8 @@ export function DashboardLayoutShell({ user, children }) {
                 key={item.label}
                 href={item.href}
                 className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group ${isActive
-                    ? "bg-white/15 text-white shadow-md border border-white/10 translate-x-1"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                  ? "bg-white/15 text-white shadow-md border border-white/10 translate-x-1"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -128,8 +136,8 @@ export function DashboardLayoutShell({ user, children }) {
           <Link
             href={settingsItem.href}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname === settingsItem.href
-                ? "bg-white/15 text-white"
-                : "text-white/70 hover:bg-white/10 hover:text-white"
+              ? "bg-white/15 text-white"
+              : "text-white/70 hover:bg-white/10 hover:text-white"
               }`}
           >
             <Settings className="w-5 h-5 text-white/60" />
@@ -177,8 +185,8 @@ export function DashboardLayoutShell({ user, children }) {
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${isActive
-                        ? "bg-white/20 text-white shadow-md"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                      ? "bg-white/20 text-white shadow-md"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
                       }`}
                   >
                     <div className="flex items-center gap-3">

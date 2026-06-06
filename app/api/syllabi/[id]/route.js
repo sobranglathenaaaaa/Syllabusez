@@ -12,7 +12,7 @@ export async function GET(request, { params }) {
       `SELECT s.id, s.course_id, s.instructor_id, s.status, s.version, s.approval_comment, s.updated_at,
               s.course_description, s.prerequisites, s.corequisites, s.semester, s.academic_year,
               s.vision, s.mission, s.quality_policy, s.institutional_outcomes,
-              s.program_outcomes, s.course_outcomes, s.performance_indicators,
+              s.program_outcomes, s.course_outcomes, s.performance_indicators, s.campus_goals,
               c.code, c.title, c.units, c.program_id,
               p.full_name as instructor_name, p.email as instructor_email
        FROM syllabi s
@@ -71,6 +71,11 @@ export async function GET(request, { params }) {
     } catch {
       syllabus.performance_indicators = [];
     }
+    try {
+      syllabus.campus_goals = syllabus.campus_goals ? JSON.parse(syllabus.campus_goals) : [];
+    } catch {
+      syllabus.campus_goals = [];
+    }
 
     // Parse week alignments
     plans.forEach(p => {
@@ -119,7 +124,8 @@ export async function PUT(request, { params }) {
       institutionalOutcomes,
       programOutcomes,
       courseOutcomes,
-      performanceIndicators
+      performanceIndicators,
+      campusGoals
     } = await request.json();
 
     if (!courseId) {
@@ -145,7 +151,7 @@ export async function PUT(request, { params }) {
         course_id = ?, status = ?, version = ?, approval_comment = NULL, updated_at = CURRENT_TIMESTAMP,
         course_description = ?, prerequisites = ?, corequisites = ?, semester = ?, academic_year = ?,
         vision = ?, mission = ?, quality_policy = ?, institutional_outcomes = ?,
-        program_outcomes = ?, course_outcomes = ?, performance_indicators = ?
+        program_outcomes = ?, course_outcomes = ?, performance_indicators = ?, campus_goals = ?
        WHERE id = ?`,
       [
         courseId,
@@ -163,6 +169,7 @@ export async function PUT(request, { params }) {
         JSON.stringify(programOutcomes || []),
         JSON.stringify(courseOutcomes || []),
         JSON.stringify(performanceIndicators || []),
+        JSON.stringify(campusGoals || []),
         id
       ]
     );

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Search, Filter, Eye, Edit2, Download, AlertCircle, FileText, CheckCircle, Clock, XCircle, File } from "lucide-react";
+import { printSyllabus } from "@/lib/utils/syllabus-print";
 
 export function SyllabusList({ role, userId }) {
   const [syllabi, setSyllabi] = useState([]);
@@ -66,157 +67,7 @@ export function SyllabusList({ role, userId }) {
   };
 
   const handlePrint = (syllabus) => {
-    if (!syllabus) return;
-
-    // Create printable document in a new window/iframe
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to download/print the syllabus.");
-      return;
-    }
-
-    const outcomesHtml = syllabus.learning_outcomes?.map((o, idx) => `
-      <div class="list-item">
-        <span class="number">${idx + 1}.</span>
-        <span>${o.description}</span>
-      </div>
-    `).join("") || "<p class='empty'>No outcomes specified.</p>";
-
-    const plansHtml = syllabus.weekly_plans?.map(p => `
-      <tr>
-        <td class="week">Week ${p.week}</td>
-        <td class="bold">${p.topic}</td>
-        <td>${p.activities || "—"}</td>
-        <td>${p.assessments || "—"}</td>
-        <td>${p.materials || "—"}</td>
-      </tr>
-    `).join("") || "<tr><td colspan='5' class='empty'>No schedule specified.</td></tr>";
-
-    const gradingHtml = syllabus.grading_components?.map(g => `
-      <tr>
-        <td class="bold">${g.name}</td>
-        <td class="right">${g.percentage}%</td>
-      </tr>
-    `).join("") || "<tr><td colspan='2' class='empty'>No grading components.</td></tr>";
-
-    const totalGrading = syllabus.grading_components?.reduce((sum, curr) => sum + curr.percentage, 0) || 0;
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${syllabus.code} Syllabus - PUP San Juan</title>
-          <style>
-            body { font-family: 'Arial', sans-serif; color: #333; line-height: 1.5; padding: 40px; margin: 0; }
-            .header-container { display: flex; align-items: center; border-bottom: 3px solid #800000; padding-bottom: 20px; margin-bottom: 30px; }
-            .title-area { flex-grow: 1; }
-            .pup-branding { color: #800000; font-size: 24px; font-weight: bold; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-            .subtitle { color: #555; font-size: 14px; margin: 5px 0 0 0; font-weight: bold; }
-            .course-title { font-size: 18px; font-weight: bold; color: #111; margin: 15px 0 5px 0; }
-            .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            .meta-table td { padding: 8px 12px; border: 1px solid #ddd; font-size: 13px; }
-            .meta-table td.label { font-weight: bold; background-color: #f9f9f9; width: 18%; }
-            h2 { color: #800000; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #800000; padding-bottom: 5px; margin: 30px 0 15px 0; letter-spacing: 0.5px; }
-            .list-item { display: flex; gap: 10px; margin-bottom: 10px; font-size: 13px; text-align: justify; }
-            .number { font-weight: bold; color: #800000; }
-            .schedule-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 30px; }
-            .schedule-table th, .schedule-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-            .schedule-table th { background-color: #f9f9f9; font-weight: bold; }
-            .schedule-table td.week { font-weight: bold; color: #800000; width: 8%; text-align: center; }
-            .grading-table { width: 50%; border-collapse: collapse; font-size: 13px; }
-            .grading-table th, .grading-table td { border: 1px solid #ddd; padding: 8px 12px; }
-            .grading-table th { background-color: #f9f9f9; font-weight: bold; }
-            .grading-table td.right { text-align: right; font-weight: bold; }
-            .bold { font-weight: bold; color: #111; }
-            .empty { color: #999; font-style: italic; }
-            .footer { margin-top: 50px; font-size: 11px; text-align: center; color: #888; border-top: 1px dashed #ccc; padding-top: 15px; }
-            @media print {
-              body { padding: 20px; }
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header-container">
-            <div class="title-area">
-              <h1 class="pup-branding">Polytechnic University of the Philippines</h1>
-              <p class="subtitle">San Juan Branch • Academic Syllabus Management Portal</p>
-              <h2 class="course-title">${syllabus.code}: ${syllabus.title}</h2>
-            </div>
-          </div>
-
-          <table class="meta-table">
-            <tr>
-              <td class="label">Course Code</td>
-              <td>${syllabus.code}</td>
-              <td class="label">Course Units</td>
-              <td>${syllabus.units} Units</td>
-            </tr>
-            <tr>
-              <td class="label">Instructor</td>
-              <td>${syllabus.instructor_name || "Unassigned"}</td>
-              <td class="label">Email Contact</td>
-              <td>${syllabus.instructor_email || "N/A"}</td>
-            </tr>
-            <tr>
-              <td class="label">Syllabus Status</td>
-              <td>Approved (Version ${syllabus.version})</td>
-              <td class="label">Last Updated</td>
-              <td>${new Date(syllabus.updated_at).toLocaleDateString()}</td>
-            </tr>
-          </table>
-
-          <h2>1. Course Learning Outcomes</h2>
-          <div style="padding-left: 10px;">
-            ${outcomesHtml}
-          </div>
-
-          <h2>2. Weekly Schedule</h2>
-          <table class="schedule-table">
-            <thead>
-              <tr>
-                <th>Week</th>
-                <th>Topic / Subject Matter</th>
-                <th>Classroom Activities</th>
-                <th>Assessments</th>
-                <th>References / Materials</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${plansHtml}
-            </tbody>
-          </table>
-
-          <h2>3. Grading Criteria</h2>
-          <table class="grading-table">
-            <thead>
-              <tr>
-                <th>Evaluation Component</th>
-                <th style="text-align: right; width: 30%;">Percentage</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${gradingHtml}
-              <tr style="font-weight: bold; background-color: #f9f9f9;">
-                <td>Total Weight</td>
-                <td style="text-align: right; color: #800000;">${totalGrading}%</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="footer">
-            Generated on ${new Date().toLocaleDateString()} • PUP San Juan Branch Official Syllabus Portal. 
-            All rights reserved.
-          </div>
-          
-          <script>
-            window.onload = function() {
-              window.print();
-            }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    printSyllabus(syllabus);
   };
 
   // Status Badge helpers
@@ -494,64 +345,163 @@ export function SyllabusList({ role, userId }) {
                     </div>
                   </div>
 
-                  {/* 1. Outcomes */}
+                  {/* 1. Performance Indicators (PI) */}
                   <div className="space-y-2">
                     <h5 className="text-xs font-black uppercase tracking-wider text-gray-800 border-l-3 border-[#800000] pl-2.5">
-                      1. Course Learning Outcomes
+                      1. Performance Indicators (PI)
                     </h5>
-                    {detailedSyllabus.learning_outcomes?.length > 0 ? (
-                      <ol className="divide-y divide-gray-100 text-xs text-gray-600 bg-gray-50/50 rounded-xl border border-gray-100 overflow-hidden">
-                        {detailedSyllabus.learning_outcomes.map((item, i) => (
-                          <li key={i} className="px-4 py-2.5 flex gap-2 leading-relaxed">
-                            <span className="font-bold text-[#800000]">{i + 1}.</span>
-                            <span>{item.description}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    ) : (
-                      <p className="text-xs text-gray-400 italic pl-3">No outcomes specified.</p>
-                    )}
-                  </div>
-
-                  {/* 2. Weekly schedule */}
-                  <div className="space-y-2">
-                    <h5 className="text-xs font-black uppercase tracking-wider text-gray-800 border-l-3 border-[#800000] pl-2.5">
-                      2. Weekly Teaching Schedule
-                    </h5>
-                    {detailedSyllabus.weekly_plans?.length > 0 ? (
+                    {detailedSyllabus.performance_indicators?.length > 0 ? (
                       <div className="overflow-x-auto border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-white">
-                        <table className="w-full text-left text-xs border-collapse">
+                        <table className="w-full text-left text-xs border-collapse table-fixed">
                           <thead>
                             <tr className="bg-gray-50 border-b border-gray-100 font-bold text-gray-500">
-                              <th className="px-3 py-2 w-16">Week</th>
-                              <th className="px-3 py-2">Topic / Subject Matter</th>
-                              <th className="px-3 py-2">Activities</th>
-                              <th className="px-3 py-2">Assessments</th>
-                              <th className="px-3 py-2">Materials / References</th>
+                              <th rowSpan={2} className="px-3 py-2 border-r border-gray-100 w-3/5 align-middle">Performance Indicators (PI)</th>
+                              <th colSpan={detailedSyllabus.program_outcomes?.length || 9} className="px-3 py-2 text-center border-b border-gray-100">Alignment to PLOs</th>
+                            </tr>
+                            <tr className="bg-gray-50 border-b border-gray-100 font-bold text-gray-500 text-center text-[10px]">
+                              {(detailedSyllabus.program_outcomes || Array.from({length: 9})).map((plo, idx) => (
+                                <th key={idx} className="px-1 py-1.5 border-r border-gray-100 w-8">{idx + 1}</th>
+                              ))}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 text-gray-600">
-                            {detailedSyllabus.weekly_plans.map((p, i) => (
-                              <tr key={i}>
-                                <td className="px-3 py-2.5 font-bold text-[#800000] text-center bg-red-50/10">W{p.week}</td>
-                                <td className="px-3 py-2.5 font-semibold text-gray-900">{p.topic}</td>
-                                <td className="px-3 py-2.5">{p.activities || "—"}</td>
-                                <td className="px-3 py-2.5">{p.assessments || "—"}</td>
-                                <td className="px-3 py-2.5 text-gray-500 italic">{p.materials || "—"}</td>
+                            {detailedSyllabus.performance_indicators.map((pi, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50/50">
+                                <td className="px-3 py-2.5 border-r border-gray-100">
+                                  <div className="font-bold text-[#800000] mb-0.5">{pi.id || `PI-${idx + 1}`}</div>
+                                  <div className="leading-relaxed text-[11px] text-justify">{pi.description || "No description"}</div>
+                                </td>
+                                {(detailedSyllabus.program_outcomes || Array.from({length: 9})).map((plo, ploIdx) => {
+                                  const ploId = plo?.id || `PLO-${ploIdx + 1}`;
+                                  const aligned = pi.alignments?.includes(ploId);
+                                  return (
+                                    <td key={ploIdx} className="px-1 py-2.5 text-center font-bold border-r border-gray-100">
+                                      {aligned ? "✓" : ""}
+                                    </td>
+                                  );
+                                })}
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-400 italic pl-3">No schedule specified.</p>
+                      <p className="text-xs text-gray-400 italic pl-3">No performance indicators specified.</p>
+                    )}
+                  </div>
+
+                  {/* 2. Course Learning Outcomes (CLO) */}
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-black uppercase tracking-wider text-gray-800 border-l-3 border-[#800000] pl-2.5">
+                      2. Course Learning Outcomes (CLO)
+                    </h5>
+                    {(detailedSyllabus.course_outcomes?.length > 0 || detailedSyllabus.learning_outcomes?.length > 0) ? (
+                      <div className="overflow-x-auto border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-white">
+                        <table className="w-full text-left text-xs border-collapse table-fixed">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100 font-bold text-gray-500">
+                              <th rowSpan={2} className="px-3 py-2 border-r border-gray-100 w-3/5 align-middle">Course Learning Outcomes (CLO)</th>
+                              <th colSpan={detailedSyllabus.program_outcomes?.length || 9} className="px-3 py-2 text-center border-b border-gray-100">Alignment to PLOs</th>
+                            </tr>
+                            <tr className="bg-gray-50 border-b border-gray-100 font-bold text-gray-500 text-center text-[10px]">
+                              {(detailedSyllabus.program_outcomes || Array.from({length: 9})).map((plo, idx) => (
+                                <th key={idx} className="px-1 py-1.5 border-r border-gray-100 w-8">{idx + 1}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-gray-600">
+                            {(detailedSyllabus.course_outcomes?.length > 0 ? detailedSyllabus.course_outcomes : detailedSyllabus.learning_outcomes).map((clo, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50/50">
+                                <td className="px-3 py-2.5 border-r border-gray-100">
+                                  <div className="font-bold text-amber-700 mb-0.5">{clo.id || `CLO-${idx + 1}`}</div>
+                                  <div className="leading-relaxed text-[11px] text-justify">{clo.description || "No description"}</div>
+                                </td>
+                                {(detailedSyllabus.program_outcomes || Array.from({length: 9})).map((plo, ploIdx) => {
+                                  const ploId = plo?.id || `PLO-${ploIdx + 1}`;
+                                  const aligned = clo.alignments?.includes(ploId);
+                                  return (
+                                    <td key={ploIdx} className="px-1 py-2.5 text-center font-bold border-r border-gray-100">
+                                      {aligned ? "✓" : ""}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic pl-3">No course learning outcomes specified.</p>
+                    )}
+                  </div>
+
+                  {/* 3. OBTL Weekly Instructional Calendar */}
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-black uppercase tracking-wider text-gray-800 border-l-3 border-[#800000] pl-2.5">
+                      3. OBTL Weekly Instructional Calendar
+                    </h5>
+                    {detailedSyllabus.weekly_plans?.length > 0 ? (
+                      <div className="overflow-x-auto border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-white">
+                        <table className="w-full text-left text-[10px] border-collapse table-fixed">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100 font-bold text-gray-500 text-center">
+                              <th rowSpan={3} className="px-2 py-2 border-r border-gray-100 w-12 align-middle">Week</th>
+                              <th rowSpan={3} className="px-2 py-2 border-r border-gray-100 align-middle">Desired Learning Outcomes (DLOs)</th>
+                              <th rowSpan={3} className="px-2 py-2 border-r border-gray-100 align-middle">Learning Content / Topics</th>
+                              <th colSpan={3} className="px-2 py-2 border-r border-gray-100 border-b border-gray-100">Instructional Delivery Design</th>
+                              <th rowSpan={3} className="px-2 py-2 border-r border-gray-100 align-middle">Assessment</th>
+                              <th colSpan={(detailedSyllabus.course_outcomes?.length > 0 ? detailedSyllabus.course_outcomes : detailedSyllabus.learning_outcomes)?.length || 5} className="px-2 py-2 border-b border-gray-100">Alignment to CLOs</th>
+                            </tr>
+                            <tr className="bg-gray-50/70 border-b border-gray-100 font-bold text-gray-500 text-center">
+                              <th rowSpan={2} className="px-2 py-1.5 border-r border-gray-100 align-middle">Face-to-face</th>
+                              <th colSpan={2} className="px-2 py-1.5 border-r border-gray-100 border-b border-gray-100">Flexible Learning & Teaching Activities (FLTAs)</th>
+                              {((detailedSyllabus.course_outcomes?.length > 0 ? detailedSyllabus.course_outcomes : detailedSyllabus.learning_outcomes) || Array.from({length: 5})).map((clo, idx) => (
+                                <th key={idx} rowSpan={2} className="px-1 py-1.5 border-r border-gray-100 w-6 align-middle">{idx + 1}</th>
+                              ))}
+                            </tr>
+                            <tr className="bg-gray-50/50 border-b border-gray-100 font-bold text-gray-500 text-center">
+                              <th className="px-2 py-1.5 border-r border-gray-100">Synchronous</th>
+                              <th className="px-2 py-1.5 border-r border-gray-100">Asynchronous</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-gray-600">
+                            {detailedSyllabus.weekly_plans.map((p, i) => (
+                              <tr key={i} className="hover:bg-gray-50/50 align-top">
+                                <td className="px-2 py-2.5 font-bold text-[#800000] text-center bg-red-50/10 border-r border-gray-100">W{p.week}</td>
+                                <td className="px-2 py-2.5 border-r border-gray-100">{p.desired_learning_outcomes || "—"}</td>
+                                <td className="px-2 py-2.5 font-semibold text-gray-900 border-r border-gray-100">{p.topic || "—"}</td>
+                                <td className="px-2 py-2.5 border-r border-gray-100">{p.activities || "—"}</td>
+                                <td className="px-2 py-2.5 border-r border-gray-100 text-center">—</td>
+                                <td className="px-2 py-2.5 border-r border-gray-100 text-center">—</td>
+                                <td className="px-2 py-2.5 border-r border-gray-100">{p.assessments || "—"}</td>
+                                {((detailedSyllabus.course_outcomes?.length > 0 ? detailedSyllabus.course_outcomes : detailedSyllabus.learning_outcomes) || Array.from({length: 5})).map((clo, cloIdx) => {
+                                  const cloId = clo?.id || `CLO-${cloIdx + 1}`;
+                                  let aligned = false;
+                                  if (Array.isArray(p.clo_alignment)) {
+                                    aligned = p.clo_alignment.includes(cloId);
+                                  } else if (typeof p.clo_alignment === "string") {
+                                    aligned = p.clo_alignment.includes(cloId);
+                                  }
+                                  return (
+                                    <td key={cloIdx} className="px-1 py-2.5 text-center font-bold border-r border-gray-100">
+                                      {aligned ? "✓" : ""}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic pl-3">No OBTL plan specified.</p>
                     )}
                   </div>
 
                   {/* 3. Grading Components */}
                   <div className="space-y-2">
                     <h5 className="text-xs font-black uppercase tracking-wider text-gray-800 border-l-3 border-[#800000] pl-2.5">
-                      3. Classroom Grading Criteria
+                      4. Classroom Grading Criteria
                     </h5>
                     {detailedSyllabus.grading_components?.length > 0 ? (
                       <div className="border border-gray-100 rounded-xl overflow-hidden max-w-md bg-gray-50/30">

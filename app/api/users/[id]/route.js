@@ -17,7 +17,7 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { email, full_name, role, password } = body;
+    const { email, full_name, role, password, program } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -28,13 +28,13 @@ export async function PUT(request, { params }) {
 
     if (password && password.trim().length > 0) {
       await query(
-        "UPDATE users SET email = ?, full_name = ?, role = ?, password = ? WHERE id = ?",
-        [email, full_name || null, role, password.trim(), id]
+        "UPDATE users SET email = ?, full_name = ?, role = ?, password = ?, program_id = ? WHERE id = ?",
+      [email, full_name || null, role, password.trim(), (role === "student" && program) ? program : null, id]
       );
     } else {
       await query(
-        "UPDATE users SET email = ?, full_name = ?, role = ? WHERE id = ?",
-        [email, full_name || null, role, id]
+        "UPDATE users SET email = ?, full_name = ?, role = ?, program_id = ? WHERE id = ?",
+      [email, full_name || null, role, (role === "student" && program) ? program : null, id]
       );
     }
 

@@ -1,22 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  BookOpen, 
-  Printer, 
-  Download, 
-  FileText, 
-  Clock, 
+import {
+  BookOpen,
+  Printer,
+  Download,
+  FileText,
+  Clock,
   CheckCircle,
   HelpCircle,
-  AlertTriangle 
+  AlertTriangle
 } from "lucide-react";
 
 export default function CurriculumPage() {
   const [departments, setDepartments] = useState([]);
-  const [customCurricula, setCustomCurricula] = useState({});
   const [selectedDept, setSelectedDept] = useState("");
   const [loading, setLoading] = useState(true);
+  // Use static curriculum file for student view
+  const staticCurriculumUrl = "/uploads/updated_curriculum.pdf";
+  const fileUrl = staticCurriculumUrl;
+  const ext = staticCurriculumUrl.split('.').pop().toLowerCase();
+  const [customCurricula, setCustomCurricula] = useState({});
 
   // Dynamic TXT reading state
   const [textContents, setTextContents] = useState("");
@@ -59,9 +63,7 @@ export default function CurriculumPage() {
   const selectedDepartmentObject = departments.find(d => d.id === selectedDept);
   const activeCustomCurriculum = customCurricula[selectedDept];
   const isBSITSelected = selectedDepartmentObject?.name?.includes("Information Technology");
-
-  const fileUrl = activeCustomCurriculum ? getCustomUrl(selectedDept, activeCustomCurriculum.file_name) : "";
-  const ext = activeCustomCurriculum ? activeCustomCurriculum.file_name.split('.').pop().toLowerCase() : "";
+  const staticExt = staticCurriculumUrl.split('.').pop().toLowerCase();
 
   // Dynamic text reader for custom TXT curriculum files
   useEffect(() => {
@@ -289,7 +291,7 @@ export default function CurriculumPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      
+
       {/* Dynamic Header & Switcher */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden">
         <div className="flex items-center gap-3">
@@ -334,7 +336,7 @@ export default function CurriculumPage() {
       {/* --- SCENARIO A: Active Custom Curriculum Uploaded (WITH IMMEDIATE EMBEDDED VIEWER) --- */}
       {activeCustomCurriculum ? (
         <div className="space-y-6">
-          
+
           {/* Top Interactive Download Bar */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
@@ -357,7 +359,7 @@ export default function CurriculumPage() {
             </div>
 
             {/* Action Button: Download */}
-            <a 
+            <a
               href={fileUrl}
               download
               className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
@@ -373,13 +375,13 @@ export default function CurriculumPage() {
               <span className="uppercase tracking-widest text-[10px] text-[#800000]">Document Viewer</span>
               <span>Active Sheet Preview</span>
             </div>
-            
+
             <div className="p-4 bg-gray-50 flex flex-col justify-center min-h-[500px]">
               {(() => {
                 if (ext === "pdf") {
                   return (
-                    <iframe 
-                      src={fileUrl} 
+                    <iframe
+                      src={fileUrl}
                       className="w-full h-[750px] rounded-2xl border border-gray-200 bg-white shadow-sm"
                       title="Student Curriculum Viewer"
                     />
@@ -411,8 +413,8 @@ export default function CurriculumPage() {
                       <HelpCircle className="w-4 h-4" />
                       <span>Office document viewer active. Scroll to review the curriculum structure.</span>
                     </div>
-                    <iframe 
-                      src={googleViewUrl} 
+                    <iframe
+                      src={googleViewUrl}
                       className="flex-1 w-full border-none"
                       title="Office Document Preview"
                     />
@@ -424,7 +426,7 @@ export default function CurriculumPage() {
             {/* Bottom auxiliary print bar */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-between items-center text-[10px] text-gray-400 font-semibold">
               <span>Official Branch Registry Sheet</span>
-              <a 
+              <a
                 href={fileUrl}
                 download
                 className="font-extrabold text-green-600 hover:text-green-800 hover:underline flex items-center gap-1"
@@ -437,10 +439,10 @@ export default function CurriculumPage() {
 
         </div>
       ) : isBSITSelected ? (
-        
+
         // --- SCENARIO B: fallback to high-fidelity BSIT dynamic grid if no custom upload exists ---
         <div className="bg-white rounded-3xl border border-gray-200 shadow-md p-6 lg:p-10 space-y-8 print:p-0 print:border-none print:shadow-none">
-          
+
           <div className="text-center border-b border-gray-300 pb-6 space-y-2 print:pb-4">
             <span className="text-xs font-black uppercase tracking-widest text-[#800000] block print:text-black">Curriculum Catalog</span>
             <h2 className="text-sm font-bold text-gray-800 print:text-black">2022 Approved Revised Curriculum</h2>
@@ -489,7 +491,7 @@ export default function CurriculumPage() {
               {renderSemesterTable("THIRD YEAR – 1st Semester", thirdYear1stSem)}
               {renderSemesterTable("THIRD YEAR – 2nd Semester", thirdYear2ndSem)}
             </div>
-            
+
             {/* Summer Term */}
             <div className="max-w-xl">
               {renderSemesterTable("THIRD YEAR – Summer Term", thirdYearSummer)}
@@ -596,13 +598,13 @@ export default function CurriculumPage() {
           </div>
         </div>
       ) : (
-        
+
         // --- SCENARIO C: placeholder fallback for other 7 programs with no custom upload ---
         <div className="bg-white rounded-3xl border border-gray-200 shadow-md p-8 text-center space-y-6 max-w-xl mx-auto py-12">
           <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-100 shadow-inner">
             <AlertTriangle className="w-8 h-8" />
           </div>
-          
+
           <div className="space-y-2">
             <h4 className="text-lg font-black text-gray-900 leading-tight">Curriculum Pending Upload</h4>
             <p className="text-xs text-gray-500 font-medium leading-relaxed">

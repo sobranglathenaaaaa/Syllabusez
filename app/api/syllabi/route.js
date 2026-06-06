@@ -83,7 +83,8 @@ export async function POST(request) {
       institutionalOutcomes,
       programOutcomes,
       courseOutcomes,
-      performanceIndicators
+      performanceIndicators,
+      campusGoals
     } = await request.json();
 
     if (!courseId) {
@@ -98,8 +99,8 @@ export async function POST(request) {
         id, course_id, instructor_id, status, version,
         course_description, prerequisites, corequisites, semester, academic_year,
         vision, mission, quality_policy, institutional_outcomes,
-        program_outcomes, course_outcomes, performance_indicators
-      ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        program_outcomes, course_outcomes, performance_indicators, campus_goals
+      ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         syllabusId,
         courseId,
@@ -116,7 +117,8 @@ export async function POST(request) {
         JSON.stringify(institutionalOutcomes || []),
         JSON.stringify(programOutcomes || []),
         JSON.stringify(courseOutcomes || []),
-        JSON.stringify(performanceIndicators || [])
+        JSON.stringify(performanceIndicators || []),
+        JSON.stringify(campusGoals || [])
       ]
     );
 
@@ -135,7 +137,7 @@ export async function POST(request) {
       for (let i = 0; i < weeklyPlans.length; i++) {
         const p = weeklyPlans[i];
         await query(
-          "INSERT INTO weekly_plans (id, syllabus_id, week, topic, activities, assessments, materials, order_index, desired_learning_outcomes, clo_alignment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO weekly_plans (id, syllabus_id, week, topic, activities, assessments, materials, order_index, desired_learning_outcomes, clo_alignment, learning_content, face_face, synchronous, asynchronous) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             crypto.randomUUID(),
             syllabusId,
@@ -146,7 +148,11 @@ export async function POST(request) {
             p.materials || "",
             i + 1,
             p.desiredLearningOutcomes || "",
-            JSON.stringify(p.cloAlignment || [])
+            JSON.stringify(p.cloAlignment || []),
+            p.learningContent || "",
+            p.faceFace || "",
+            p.synchronous || "",
+            p.asynchronous || ""
           ]
         );
       }

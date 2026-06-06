@@ -17,28 +17,58 @@ import {
 } from "lucide-react";
 
 export default function AdminCurriculumPage() {
-  const [departments, setDepartments] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [customCurricula, setCustomCurricula] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [newProgramName, setNewProgramName] = useState("");
+  const [programsLoading, setProgramsLoading] = useState(false);
 
-  // Selected files mapped by departmentId
+
   const [selectedFiles, setSelectedFiles] = useState({});
   const [uploading, setUploading] = useState({});
   const [actionMessage, setActionMessage] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Preview Modal state
-  const [previewFile, setPreviewFile] = useState(null); // { url, name, deptName }
+  const [previewFile, setPreviewFile] = useState(null); // { url, name, programName }
   const [previewText, setPreviewText] = useState("");
   const [loadingText, setLoadingText] = useState(false);
 
-  // File input refs mapped by departmentId
+  // File input refs mapped by programId
   const fileRefs = useRef({});
+
+  const handleAddProgram = async () => {
+    if (!newProgramName.trim()) {
+      triggerMessage("error", "Program name cannot be empty");
+      return;
+    }
+    try {
+      setProgramsLoading(true);
+      const res = await fetch("/api/programs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newProgramName.trim() })
+      });
+      if (res.ok) {
+        triggerMessage("success", "Program added successfully");
+        setNewProgramName("");
+        await fetchMetadata();
+      } else {
+        const err = await res.json();
+        triggerMessage("error", err.error || "Failed to add program");
+      }
+    } catch (e) {
+      console.error(e);
+      triggerMessage("error", "Network error while adding program");
+    } finally {
+      setProgramsLoading(false);
+    }
+  };
 
   const fetchMetadata = async () => {
     try {
-      const deptRes = await fetch("/api/programs");
-      const deptData = await deptRes.json();
-      setDepartments(deptData.programs || []);
+      const progRes = await fetch("/api/programs");
+      const progData = await progRes.json();
+      setPrograms(progData.programs || []);
 
       const currRes = await fetch("/api/curriculum");
       const currData = await currRes.json();
@@ -55,11 +85,14 @@ export default function AdminCurriculumPage() {
     setLoading(false);
   };
 
+  // Removed duplicate handleDeleteProgram definition to avoid conflict.
+
+
   useEffect(() => {
     fetchMetadata();
   }, []);
 
-  const handleFileChange = (deptId, e) => {
+  const handleFileChange = (programId, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -73,7 +106,7 @@ export default function AdminCurriculumPage() {
 
     setSelectedFiles(prev => ({
       ...prev,
-      [deptId]: file
+      [programId]: file
     }));
   };
 
@@ -84,15 +117,15 @@ export default function AdminCurriculumPage() {
     }, 4000);
   };
 
-  const handleUpload = async (deptId) => {
-    const file = selectedFiles[deptId];
+  const handleUpload = async (programId) => {
+    const file = selectedFiles[programId];
     if (!file) return;
 
-    setUploading(prev => ({ ...prev, [deptId]: true }));
+    setUploading(prev => ({ ...prev, [programId]: true }));
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("programId", deptId);
+    formData.append("programId", programId);
 
     try {
       const res = await fetch("/api/curriculum", {
@@ -106,11 +139,11 @@ export default function AdminCurriculumPage() {
         // Clean chosen file
         setSelectedFiles(prev => {
           const clone = { ...prev };
-          delete clone[deptId];
+          delete clone[programId];
           return clone;
         });
-        if (fileRefs.current[deptId]) {
-          fileRefs.current[deptId].value = "";
+        if (fileRefs.current[programId]) {
+          fileRefs.current[programId].value = "";
         }
         await fetchMetadata();
       } else {
@@ -121,16 +154,33 @@ export default function AdminCurriculumPage() {
       console.error("Upload error:", e);
       triggerMessage("error", "Network connection failure.");
     }
-    setUploading(prev => ({ ...prev, [deptId]: false }));
+    setUploading(prev => ({ ...prev, [programId]: false }));
   };
 
-  const handleDelete = async (deptId) => {
+  const handleDeleteProgram = async (programId) => {
+    if (!confirm("Are you sure you want to delete this program? All related curriculum entries will be removed.")) return;
+    try {
+      const res = await fetch(`/api/programs?programId=${programId}`, { method: "DELETE" });
+      if (res.ok) {
+        triggerMessage("success", "Program deleted successfully");
+        await fetchMetadata();
+      } else {
+        const err = await res.json();
+        triggerMessage("error", err.error || "Failed to delete program");
+      }
+    } catch (e) {
+      console.error(e);
+      triggerMessage("error", "Network error while deleting program");
+    }
+  };
+
+  const handleDelete = async (programId) => {
     if (!confirm("Are you sure you want to delete this custom curriculum? It will immediately fallback to the default interactive portal catalog.")) {
       return;
     }
 
     try {
-      const res = await fetch(`/api/curriculum?programId=${deptId}`, {
+      const res = await fetch(`/api/curriculum?programId=${programId}`, {
         method: "DELETE"
       });
 
@@ -146,20 +196,23 @@ export default function AdminCurriculumPage() {
     }
   };
 
+  
+;
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
     return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
-  const getCustomUrl = (deptId, fileName) => {
+  const getCustomUrl = (programId, fileName) => {
     const safeFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    return `/uploads/curricula/${deptId}_${safeFileName}`;
+    return `/uploads/curricula/${programId}_${safeFileName}`;
   };
 
-  const openPreview = async (deptId, fileName, deptName) => {
-    const fileUrl = getCustomUrl(deptId, fileName);
-    setPreviewFile({ url: fileUrl, name: fileName, deptName });
+  const openPreview = async (programId, fileName, programName) => {
+    const fileUrl = getCustomUrl(programId, fileName);
+    setPreviewFile({ url: fileUrl, name: fileName, programName });
 
     const ext = fileName.split('.').pop().toLowerCase();
     if (ext === "txt") {
@@ -216,23 +269,35 @@ export default function AdminCurriculumPage() {
         </div>
       </div>
 
-      {/* Grid listing all 8 academic programs */}
+      {/* Add New Program */}
+      <div className="flex items-center gap-4 mb-4">
+        <input type="text" placeholder="New program name" value={newProgramName} onChange={(e) => setNewProgramName(e.target.value)} className="px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#800000]" />
+        <button onClick={handleAddProgram} disabled={programsLoading} className="px-3 py-1 bg-[#800000] hover:bg-red-900 text-white rounded-md disabled:opacity-50">
+          {programsLoading ? "Adding..." : "Add Program"}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {departments.map((dept) => {
-          const customSheet = customCurricula[dept.id];
-          const chosenFile = selectedFiles[dept.id];
-          const isUploading = uploading[dept.id];
+        {programs.map((program) => {
+          const customSheet = customCurricula[program.id];
+          const chosenFile = selectedFiles[program.id];
+          const isUploading = uploading[program.id];
 
           return (
             <div
-              key={dept.id}
+              key={program.id}
               className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between"
             >
               {/* Program Header */}
               <div className="p-6 border-b border-gray-50 space-y-3 bg-gradient-to-br from-white to-gray-50/30">
                 <div className="flex justify-between items-start gap-3">
-                  <div className="w-20 h-10 rounded-xl bg-red-50 text-[#800000] font-bold text-xs flex items-center justify-center shadow-inner border border-red-100 flex-shrink-0">
-                    {dept.name.match(/\(([^)]+)\)/)?.[1] || "DEPT"}
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 h-10 rounded-xl bg-red-50 text-[#800000] font-bold text-xs flex items-center justify-center shadow-inner border border-red-100 flex-shrink-0">
+                      {program.name.match(/\(([^)]+)\)/)?.[1] || program.name}
+                    </div>
+                    <button onClick={() => handleDeleteProgram(program.id)} className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded flex items-center gap-1">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
 
                   {/* Status Badge */}
@@ -247,11 +312,7 @@ export default function AdminCurriculumPage() {
                     </span>
                   )}
                 </div>
-
-                <h4 className="font-bold text-sm text-gray-900 leading-snug">{dept.name}</h4>
               </div>
-
-              {/* Upload & Action Details */}
               <div className="p-6 flex-1 flex flex-col justify-between gap-6">
 
                 {/* Current Active Sheet Details */}
@@ -270,14 +331,14 @@ export default function AdminCurriculumPage() {
 
                     <div className="flex flex-wrap gap-2 pt-1 border-t border-green-100/50 mt-2">
                       <button
-                        onClick={() => openPreview(dept.id, customSheet.file_name, dept.name)}
+                        onClick={() => openPreview(program.id, customSheet.file_name, program.name)}
                         className="px-3 py-1.5 bg-[#800000] hover:bg-red-900 text-white font-extrabold text-[10px] rounded-lg transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>View Document</span>
                       </button>
                       <a
-                        href={getCustomUrl(dept.id, customSheet.file_name)}
+                        href={getCustomUrl(program.id, customSheet.file_name)}
                         download
                         className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-extrabold text-[10px] rounded-lg transition-colors flex items-center gap-1 shadow-sm"
                       >
@@ -285,7 +346,7 @@ export default function AdminCurriculumPage() {
                         <span>Download</span>
                       </a>
                       <button
-                        onClick={() => handleDelete(dept.id)}
+                        onClick={() => handleDelete(program.id)}
                         className="px-3 py-1.5 border border-red-200 hover:bg-red-50 text-red-600 font-extrabold text-[10px] rounded-lg transition-colors flex items-center gap-1"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -311,16 +372,16 @@ export default function AdminCurriculumPage() {
                       </span>
                       <input
                         type="file"
-                        ref={el => fileRefs.current[dept.id] = el}
+                        ref={el => fileRefs.current[program.id] = el}
                         accept=".pdf,.txt,.doc,.docx"
-                        onChange={(e) => handleFileChange(dept.id, e)}
+                        onChange={(e) => handleFileChange(program.id, e)}
                         className="hidden"
                       />
                     </label>
 
                     {chosenFile && (
                       <button
-                        onClick={() => handleUpload(dept.id)}
+                        onClick={() => handleUpload(program.id)}
                         disabled={isUploading}
                         className="px-4 py-2.5 bg-[#800000] hover:bg-red-900 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1 disabled:opacity-50"
                       >
@@ -348,7 +409,13 @@ export default function AdminCurriculumPage() {
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-[#800000] uppercase tracking-widest">{previewFile.deptName}</span>
+                <span className="text-[10px] font-bold text-[#800000] uppercase tracking-widest">{previewFile.programName}</span>
+                <button
+                  onClick={() => handleDeleteProgram(previewFile.programId)}
+                  className="ml-2 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded"
+                >
+                  Delete Program
+                </button>
                 <h4 className="font-extrabold text-sm text-gray-900 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#800000]" />
                   <span>Curriculum Sheet Preview: {previewFile.name}</span>

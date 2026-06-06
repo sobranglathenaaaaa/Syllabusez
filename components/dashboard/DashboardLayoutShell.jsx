@@ -27,29 +27,9 @@ export function DashboardLayoutShell({ user, children }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  // Dynamic sample notifications based on role
-  const getNotifications = () => {
-    if (role === "admin") {
-      return [
-        { id: 1, text: "CCIS102 - Computer Programming 1 syllabus submitted for review by Prof. Santos.", time: "10m ago", read: false },
-        { id: 2, text: "New instructor account created: Prof. Maria Elizabeth C. Santos.", time: "2h ago", read: true },
-        { id: 3, text: "System database seeded with initial PUP SJ datasets.", time: "1d ago", read: true }
-      ];
-    } else if (role === "instructor") {
-      return [
-        { id: 1, text: "CCIS101 - Introduction to Computing syllabus has been APPROVED.", time: "1h ago", read: false },
-        { id: 2, text: "CCIS103 - Data Structures syllabus saved successfully as draft.", time: "3h ago", read: true },
-        { id: 3, text: "Welcome to the PUP Syllabus Management Portal!", time: "1d ago", read: true }
-      ];
-    } else {
-      return [
-        { id: 1, text: "CCIS101 - Syllabus for Introduction to Computing is now available for download.", time: "1h ago", read: false },
-        { id: 2, text: "You have been enrolled in 4 CCIS courses and 1 COE course.", time: "1d ago", read: true }
-      ];
-    }
-  };
 
-  const [notifications, setNotifications] = useState(getNotifications());
+
+  const [notifications, setNotifications] = useState([]);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAllAsRead = () => {
@@ -62,7 +42,7 @@ export function DashboardLayoutShell({ user, children }) {
     document.cookie = "session_user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     document.cookie = "session_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     document.cookie = "session_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    
+
     // Redirect to home page
     router.push("/");
     router.refresh();
@@ -86,7 +66,7 @@ export function DashboardLayoutShell({ user, children }) {
   }
 
   // Settings at the bottom
-  const settingsItem = { label: "Settings", href: "#", icon: Settings };
+  const settingsItem = { label: "Settings", href: "/settings", icon: Settings };
 
   // Initials for avatar
   const getInitials = (fullName) => {
@@ -124,11 +104,10 @@ export function DashboardLayoutShell({ user, children }) {
               <Link
                 key={item.label}
                 href={item.href}
-                className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group ${
-                  isActive
+                className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group ${isActive
                     ? "bg-white/15 text-white shadow-md border border-white/10 translate-x-1"
                     : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? "text-amber-400" : "text-white/60 group-hover:text-white"}`} />
@@ -148,16 +127,15 @@ export function DashboardLayoutShell({ user, children }) {
         <div className="p-4 border-t border-white/10 space-y-2 bg-black/5">
           <Link
             href={settingsItem.href}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-              pathname === settingsItem.href
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname === settingsItem.href
                 ? "bg-white/15 text-white"
                 : "text-white/70 hover:bg-white/10 hover:text-white"
-            }`}
+              }`}
           >
             <Settings className="w-5 h-5 text-white/60" />
             <span>{settingsItem.label}</span>
           </Link>
-          
+
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-red-200 hover:bg-red-950/40 hover:text-white transition-all duration-200 group text-left border border-transparent hover:border-red-950/20"
@@ -198,11 +176,10 @@ export function DashboardLayoutShell({ user, children }) {
                     key={item.label}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                      isActive
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${isActive
                         ? "bg-white/20 text-white shadow-md"
                         : "text-white/70 hover:bg-white/10 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="w-5 h-5 text-white/80" />
@@ -254,9 +231,8 @@ export function DashboardLayoutShell({ user, children }) {
                   setNotificationsOpen(!notificationsOpen);
                   setUserDropdownOpen(false);
                 }}
-                className={`p-2.5 rounded-xl text-gray-600 hover:bg-gray-50 transition-all border border-gray-100 relative ${
-                  notificationsOpen ? "bg-gray-50 text-[#800000] ring-2 ring-red-800/10" : ""
-                }`}
+                className={`p-2.5 rounded-xl text-gray-600 hover:bg-gray-50 transition-all border border-gray-100 relative ${notificationsOpen ? "bg-gray-50 text-[#800000] ring-2 ring-red-800/10" : ""
+                  }`}
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (

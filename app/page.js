@@ -15,9 +15,9 @@ export default function Home() {
       await fetch("/api/seed", { method: "POST" });
 
       const roleProfiles = {
-        admin: { id: "a1a1a1a1-1111-4111-a111-111111111111", email: "admin@pup.edu.ph", name: "Dr. Danilo T. dela Cruz" },
-        instructor: { id: "i2i2i2i2-2222-4222-i222-222222222222", email: "instructor@pup.edu.ph", name: "Prof. Maria Elizabeth C. Santos" },
-        student: { id: "s3s3s3s3-3333-4333-s333-333333333333", email: "student@pup.edu.ph", name: "Juan G. Gomez" }
+        admin: { id: "a1a1a1a1-1111-4111-a111-111111111111", email: "admin@pup.edu.ph", name: "Admin Dela Cruz" },
+        instructor: { id: "i2i2i2i2-2222-4222-i222-222222222222", email: "instructor@pup.edu.ph", name: "Staff Dela Cruz" },
+        student: { id: "s3s3s3s3-3333-4333-s333-333333333333", email: "student@pup.edu.ph", name: "Juan Dela Cruz" }
       };
 
       const user = roleProfiles[role];

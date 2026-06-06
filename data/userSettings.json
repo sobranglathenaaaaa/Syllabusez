@@ -1,0 +1,20 @@
+{
+  "admin": {
+    "displayName": "Admin",
+    "email": "admin@pup.edu.ph",
+    "timeZone": "UTC",
+    "language": "en"
+  },
+  "instructor": {
+    "displayName": "Instructor",
+    "email": "instructor@pup.edu.ph",
+    "timeZone": "UTC",
+    "language": "en"
+  },
+  "student": {
+    "displayName": "Student",
+    "email": "student@pup.edu.ph",
+    "timeZone": "UTC",
+    "language": "en"
+  }
+}

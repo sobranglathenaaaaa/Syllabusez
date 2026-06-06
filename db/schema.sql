@@ -144,6 +144,7 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) DEFAULT NULL,
   `role` enum('admin','instructor','student') NOT NULL DEFAULT 'student',
+  `program_id` varchar(36) DEFAULT NULL,   -- new column linking to programs
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -214,8 +215,10 @@ ALTER TABLE `syllabi`
 -- Indexes for table `users`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`);
-
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `program_id` (`program_id`);
+ALTER TABLE `users`
+  ADD CONSTRAINT `users_ibfk_program` FOREIGN KEY (`program_id`) REFERENCES `programs` (`id`) ON DELETE SET NULL;
 -- Indexes for table `weekly_plans`
 ALTER TABLE `weekly_plans`
   ADD PRIMARY KEY (`id`),

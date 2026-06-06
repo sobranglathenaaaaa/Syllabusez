@@ -10,7 +10,7 @@ export function UserManagement() {
   const [activeTab, setActiveTab] = useState("list"); // list | add | batch
 
   // Add user form state
-  const [addForm, setAddForm] = useState({ email: "", full_name: "", role: "instructor", password: "" });
+  const [addForm, setAddForm] = useState({ email: "", full_name: "", role: "instructor", password: "", program: "" });
   const [addStatus, setAddStatus] = useState(null);
 
   // Edit user modal state
@@ -23,6 +23,7 @@ export function UserManagement() {
   const [batchStatus, setBatchStatus] = useState(null);
   const [batchUploading, setBatchUploading] = useState(false);
   const [importedUsers, setImportedUsers] = useState([]);
+  const [programs, setPrograms] = useState([]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -43,6 +44,18 @@ export function UserManagement() {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Fetch programs for student assignment
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      try {
+        const res = await fetch(`/api/programs`);
+        const data = await res.json();
+        setPrograms(data.programs || []);
+      } catch { setPrograms([]); }
+    };
+    fetchPrograms();
+  }, []);
+
   // Add single user
   const handleAddUser = async (e) => {
     e.preventDefault();
@@ -56,7 +69,7 @@ export function UserManagement() {
       const data = await res.json();
       if (res.ok) {
         setAddStatus({ type: "success", message: "User added successfully!" });
-        setAddForm({ email: "", full_name: "", role: "instructor", password: "" });
+        setAddForm({ email: "", full_name: "", role: "instructor", password: "", program: "" });
         fetchUsers();
       } else {
         setAddStatus({ type: "error", message: data.error });
@@ -78,6 +91,7 @@ export function UserManagement() {
           email: editingUser.email,
           full_name: editingUser.full_name,
           role: editingUser.role,
+          program: editingUser.program,
           password: editingUser.password,
         }),
       });
@@ -101,7 +115,7 @@ export function UserManagement() {
   const downloadCSVTemplate = () => {
     const csvContent = "email,lastname,firstname,middlename,password\n" +
       "student.juan@pup.edu.ph,Gomez,Juan,Dela Cruz,pup_student.juan\n" +
-      "student.maria@pup.edu.ph,Santos,Maria,Clara,\n";
+      "student.maria@pup.edu.ph,Dela Cruz,\n";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -220,11 +234,10 @@ export function UserManagement() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-              activeTab === tab.key
-                ? "bg-[#800000] text-white shadow-md"
-                : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-            }`}
+            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.key
+              ? "bg-[#800000] text-white shadow-md"
+              : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+              }`}
           >
             {tab.label}
           </button>
@@ -274,13 +287,12 @@ export function UserManagement() {
                       <td className="px-6 py-4 font-medium text-gray-900">{user.full_name || "—"}</td>
                       <td className="px-6 py-4 text-gray-600">{user.email}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-semibold capitalize ${
-                          user.role === "admin"
-                            ? "bg-purple-100 text-purple-700"
-                            : user.role === "instructor"
+                        <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-semibold capitalize ${user.role === "admin"
+                          ? "bg-purple-100 text-purple-700"
+                          : user.role === "instructor"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-green-100 text-green-700"
-                        }`}>
+                          }`}>
                           {user.role}
                         </span>
                       </td>
@@ -325,9 +337,8 @@ export function UserManagement() {
           </p>
 
           {addStatus && (
-            <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
-              addStatus.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
-            }`}>
+            <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${addStatus.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+              }`}>
               {addStatus.message}
             </div>
           )}
@@ -343,7 +354,7 @@ export function UserManagement() {
                 placeholder="Last Name, First Name M.I."
               />
             </div>
-             <div>
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
               <input
                 type="email"
@@ -375,6 +386,21 @@ export function UserManagement() {
                 <option value="student">Student</option>
                 <option value="admin">Admin</option>
               </select>
+              {addForm.role === "student" && (
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Program</label>
+                  <select
+                    value={addForm.program}
+                    onChange={(e) => setAddForm({ ...addForm, program: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 bg-white"
+                  >
+                    <option value="">Select Program</option>
+                    {programs.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <button
               type="submit"
@@ -408,7 +434,7 @@ export function UserManagement() {
 
           <p className="text-xs text-gray-500 mb-6 leading-relaxed">
             File format: <strong>email, lastname, firstname, middlename, password</strong> — one student per row. Header row is optional. <br />
-            <span className="text-[#800000] font-semibold">💡 Password Handling</span>: If a student's password field is blank or omitted in the template, a secure default password will be auto-generated based on the formula: <code className="bg-red-50 px-1 py-0.5 rounded text-[11px] font-mono">pup_ + email_username_prefix</code>.
+            <span className="text-[#800000] font-semibold"> Password Handling</span>: If a student's password field is blank or omitted in the template, a secure default password will be auto-generated based on the formula: <code className="bg-red-50 px-1 py-0.5 rounded text-[11px] font-mono">pup_ + email_username_prefix</code>.
           </p>
 
           <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-red-400 transition-colors mb-6">
@@ -472,9 +498,8 @@ export function UserManagement() {
 
           {/* Status */}
           {batchStatus && (
-            <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
-              batchStatus.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
-            }`}>
+            <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${batchStatus.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+              }`}>
               <p>{batchStatus.message}</p>
               {batchStatus.errors?.length > 0 && (
                 <ul className="mt-2 text-xs space-y-1">
@@ -556,9 +581,8 @@ export function UserManagement() {
             </div>
 
             {editStatus && (
-              <div className={`mb-4 px-4 py-2.5 rounded-xl text-xs font-semibold ${
-                editStatus.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
-              }`}>
+              <div className={`mb-4 px-4 py-2.5 rounded-xl text-xs font-semibold ${editStatus.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                }`}>
                 {editStatus.message}
               </div>
             )}

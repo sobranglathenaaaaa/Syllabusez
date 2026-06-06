@@ -164,6 +164,7 @@ export function SyllabusEditor({ syllabusId = null }) {
             if (s.program_outcomes?.length > 0) setProgramOutcomes(s.program_outcomes);
             if (s.course_outcomes?.length > 0) setCourseOutcomes(s.course_outcomes);
             if (s.performance_indicators?.length > 0) setPerformanceIndicators(s.performance_indicators);
+            if (s.campus_goals?.length > 0) setCampusGoals(s.campus_goals);
 
             if (s.weekly_plans?.length > 0) {
               setWeeklyPlans(s.weekly_plans.map(p => ({
@@ -529,6 +530,7 @@ export function SyllabusEditor({ syllabusId = null }) {
       programOutcomes,
       courseOutcomes,
       performanceIndicators,
+      campusGoals,
       learningOutcomes: courseOutcomes.map(c => ({ description: c.description })), // backward compatibility
       weeklyPlans: weeklyPlans.map(w => ({
         week: w.week,
@@ -537,7 +539,11 @@ export function SyllabusEditor({ syllabusId = null }) {
         assessments: w.assessments,
         materials: w.materials,
         desiredLearningOutcomes: w.desiredLearningOutcomes,
-        cloAlignment: w.cloAlignment
+        cloAlignment: w.cloAlignment,
+        learningContent: w.learningContent,
+        faceFace: w.faceFace,
+        synchronous: w.synchronous,
+        asynchronous: w.asynchronous
       })),
       gradingComponents
     };

@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
@@ -9,22 +9,23 @@ export async function GET(request) {
     const search = searchParams.get("search") || "";
     const role = searchParams.get("role") || "";
 
-    let sql = "SELECT id, full_name, email, role, created_at FROM users WHERE 1=1";
-    const values = [];
+    let query = supabase
+      .from("users")
+      .select("id, full_name, email, role, created_at")
+      .order("created_at", { ascending: false });
 
     if (search) {
-      sql += " AND (full_name LIKE ? OR email LIKE ?)";
-      values.push(`%${search}%`, `%${search}%`);
+      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
     if (role) {
-      sql += " AND role = ?";
-      values.push(role);
+      query = query.eq("role", role);
     }
 
-    sql += " ORDER BY created_at DESC";
+    const { data: rows, error } = await query;
 
-    const rows = await query(sql, values);
-    return NextResponse.json({ users: rows });
+    if (error) throw error;
+
+    return NextResponse.json({ users: rows || [] });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -44,16 +45,26 @@ export async function POST(request) {
     }
 
     const id = crypto.randomUUID();
-    await query(
-      "INSERT INTO users (id, full_name, email, role, password, program_id) VALUES (?, ?, ?, ?, ?, ?)",
-      [id, full_name || null, email, role, password || null, (role === "student" && program) ? program : null]
-    );
+    const { error } = await supabase
+      .from("users")
+      .insert([{
+        id,
+        full_name: full_name || null,
+        email,
+        role,
+        password: password || null,
+        program_id: (role === "student" && program) ? program : null
+      }]);
+
+    if (error) {
+      if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') { // 23505 is Postgres unique violation
+        return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
+      }
+      throw error;
+    }
 
     return NextResponse.json({ success: true, id });
   } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") {
-      return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
-    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

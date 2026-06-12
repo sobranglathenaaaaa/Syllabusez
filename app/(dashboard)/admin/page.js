@@ -1,21 +1,22 @@
 import { cookies } from "next/headers";
 import { Greeting } from "@/components/dashboard/Greeting";
 import { AdminDashboardContent } from "@/components/dashboard/AdminDashboardContent";
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import Link from "next/link";
 import { Users, FileText, CheckSquare, Layers } from "lucide-react";
 
 async function getAdminStats() {
   try {
-    const [instructors] = await query("SELECT COUNT(*) as count FROM users WHERE role = 'instructor'");
-    const [students] = await query("SELECT COUNT(*) as count FROM users WHERE role = 'student'");
-    const [approved] = await query("SELECT COUNT(*) as count FROM syllabi WHERE status = 'approved'");
-    const [pending] = await query("SELECT COUNT(*) as count FROM syllabi WHERE status = 'submitted'");
+    const { count: instructors } = await supabase.from("users").select('*', { count: 'exact', head: true }).eq('role', 'instructor');
+    const { count: students } = await supabase.from("users").select('*', { count: 'exact', head: true }).eq('role', 'student');
+    const { count: approved } = await supabase.from("syllabi").select('*', { count: 'exact', head: true }).eq('status', 'approved');
+    const { count: pending } = await supabase.from("syllabi").select('*', { count: 'exact', head: true }).eq('status', 'submitted');
+
     return {
-      instructors: instructors?.count ?? 0,
-      students: students?.count ?? 0,
-      approved: approved?.count ?? 0,
-      pending: pending?.count ?? 0,
+      instructors: instructors ?? 0,
+      students: students ?? 0,
+      approved: approved ?? 0,
+      pending: pending ?? 0,
     };
   } catch (error) {
     console.error("Failed to query admin stats:", error);

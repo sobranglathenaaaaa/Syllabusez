@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
@@ -12,45 +12,54 @@ export async function GET(request) {
     const programId = searchParams.get("programId") || searchParams.get("departmentId") || "";
     const courseId = searchParams.get("courseId") || "";
 
-    let sql = `
-      SELECT s.id, s.course_id, s.instructor_id, s.status, s.version, s.updated_at,
-             c.code, c.title as course_title, c.units, c.program_id,
-             p.full_name as instructor_name, p.email as instructor_email
-      FROM syllabi s
-      LEFT JOIN courses c ON s.course_id = c.id
-      LEFT JOIN users p ON s.instructor_id = p.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (search) {
-      sql += " AND (c.code LIKE ? OR c.title LIKE ?)";
-      params.push(`%${search}%`, `%${search}%`);
-    }
+    let query = supabase
+      .from("syllabi")
+      .select(`
+        id, course_id, instructor_id, status, version, updated_at,
+        courses ( id, code, title, units, program_id ),
+        users ( id, full_name, email )
+      `)
+      .order("updated_at", { ascending: false });
 
     if (status) {
-      sql += " AND s.status = ?";
-      params.push(status);
+      query = query.eq("status", status);
+    }
+    if (instructorId) {
+      query = query.eq("instructor_id", instructorId);
+    }
+    if (courseId) {
+      query = query.eq("course_id", courseId);
     }
 
-    if (instructorId) {
-      sql += " AND s.instructor_id = ?";
-      params.push(instructorId);
-    }
+    const { data: syllabiData, error } = await query;
+    if (error) throw error;
+
+    let syllabi = syllabiData.map(s => ({
+      id: s.id,
+      course_id: s.course_id,
+      instructor_id: s.instructor_id,
+      status: s.status,
+      version: s.version,
+      updated_at: s.updated_at,
+      code: s.courses?.code,
+      course_title: s.courses?.title,
+      units: s.courses?.units,
+      program_id: s.courses?.program_id,
+      instructor_name: s.users?.full_name,
+      instructor_email: s.users?.email
+    }));
 
     if (programId) {
-      sql += " AND c.program_id = ?";
-      params.push(programId);
+      syllabi = syllabi.filter(s => s.program_id === programId);
     }
 
-    if (courseId) {
-      sql += " AND s.course_id = ?";
-      params.push(courseId);
+    if (search) {
+      const searchLower = search.toLowerCase();
+      syllabi = syllabi.filter(s => 
+        (s.code?.toLowerCase().includes(searchLower) || s.course_title?.toLowerCase().includes(searchLower))
+      );
     }
 
-    sql += " ORDER BY s.updated_at DESC";
-
-    const syllabi = await query(sql, params);
     return NextResponse.json({ syllabi });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -94,79 +103,74 @@ export async function POST(request) {
     const syllabusId = crypto.randomUUID();
 
     // 1. Insert Syllabus metadata
-    await query(
-      `INSERT INTO syllabi (
-        id, course_id, instructor_id, status, version,
-        course_description, prerequisites, corequisites, semester, academic_year,
-        vision, mission, quality_policy, institutional_outcomes,
-        program_outcomes, course_outcomes, performance_indicators, campus_goals
-      ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        syllabusId,
-        courseId,
-        instructorId,
-        status || "draft",
-        courseDescription || "",
-        prerequisites || "",
-        corequisites || "",
-        semester || "",
-        academicYear || "",
-        vision || "",
-        mission || "",
-        qualityPolicy || "",
-        JSON.stringify(institutionalOutcomes || []),
-        JSON.stringify(programOutcomes || []),
-        JSON.stringify(courseOutcomes || []),
-        JSON.stringify(performanceIndicators || []),
-        JSON.stringify(campusGoals || [])
-      ]
-    );
+    const { error: syllabusError } = await supabase.from("syllabi").insert([{
+      id: syllabusId,
+      course_id: courseId,
+      instructor_id: instructorId,
+      status: status || "draft",
+      version: 1,
+      course_description: courseDescription || "",
+      prerequisites: prerequisites || "",
+      corequisites: corequisites || "",
+      semester: semester || "",
+      academic_year: academicYear || "",
+      vision: vision || "",
+      mission: mission || "",
+      quality_policy: qualityPolicy || "",
+      institutional_outcomes: institutionalOutcomes || [],
+      program_outcomes: programOutcomes || [],
+      course_outcomes: courseOutcomes || [],
+      performance_indicators: performanceIndicators || [],
+      campus_goals: campusGoals || []
+    }]);
+
+    if (syllabusError) throw syllabusError;
 
     // 2. Insert Learning Outcomes
     if (learningOutcomes && learningOutcomes.length > 0) {
-      for (let i = 0; i < learningOutcomes.length; i++) {
-        await query(
-          "INSERT INTO learning_outcomes (id, syllabus_id, description, order_index) VALUES (?, ?, ?, ?)",
-          [crypto.randomUUID(), syllabusId, learningOutcomes[i].description, i + 1]
-        );
-      }
+      const outcomesToInsert = learningOutcomes.map((lo, index) => ({
+        id: crypto.randomUUID(),
+        syllabus_id: syllabusId,
+        description: lo.description,
+        order_index: index + 1
+      }));
+      const { error: loError } = await supabase.from("learning_outcomes").insert(outcomesToInsert);
+      if (loError) throw loError;
     }
 
     // 3. Insert Weekly Plans
     if (weeklyPlans && weeklyPlans.length > 0) {
-      for (let i = 0; i < weeklyPlans.length; i++) {
-        const p = weeklyPlans[i];
-        await query(
-          "INSERT INTO weekly_plans (id, syllabus_id, week, topic, activities, assessments, materials, order_index, desired_learning_outcomes, clo_alignment, learning_content, face_face, synchronous, asynchronous) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [
-            crypto.randomUUID(),
-            syllabusId,
-            p.week,
-            p.topic,
-            p.activities || "",
-            p.assessments || "",
-            p.materials || "",
-            i + 1,
-            p.desiredLearningOutcomes || "",
-            JSON.stringify(p.cloAlignment || []),
-            p.learningContent || "",
-            p.faceFace || "",
-            p.synchronous || "",
-            p.asynchronous || ""
-          ]
-        );
-      }
+      const plansToInsert = weeklyPlans.map((p, index) => ({
+        id: crypto.randomUUID(),
+        syllabus_id: syllabusId,
+        week: p.week,
+        topic: p.topic,
+        activities: p.activities || "",
+        assessments: p.assessments || "",
+        materials: p.materials || "",
+        order_index: index + 1,
+        desired_learning_outcomes: p.desiredLearningOutcomes || "",
+        clo_alignment: p.cloAlignment || [],
+        learning_content: p.learningContent || "",
+        face_face: p.faceFace || "",
+        synchronous: p.synchronous || "",
+        asynchronous: p.asynchronous || ""
+      }));
+      const { error: wpError } = await supabase.from("weekly_plans").insert(plansToInsert);
+      if (wpError) throw wpError;
     }
 
     // 4. Insert Grading Components
     if (gradingComponents && gradingComponents.length > 0) {
-      for (let i = 0; i < gradingComponents.length; i++) {
-        const g = gradingComponents[i];
-        await query(
-          "INSERT INTO grading_components (id, syllabus_id, name, percentage, order_index) VALUES (?, ?, ?, ?, ?)",
-          [crypto.randomUUID(), syllabusId, g.name, g.percentage, i + 1]
-        );
-      }
+      const gradingToInsert = gradingComponents.map((g, index) => ({
+        id: crypto.randomUUID(),
+        syllabus_id: syllabusId,
+        name: g.name,
+        percentage: g.percentage,
+        order_index: index + 1
+      }));
+      const { error: gcError } = await supabase.from("grading_components").insert(gradingToInsert);
+      if (gcError) throw gcError;
     }
 
     return NextResponse.json({ success: true, syllabusId });

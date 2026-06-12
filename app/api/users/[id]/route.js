@@ -1,11 +1,12 @@
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 // DELETE /api/users/[id]
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    await query("DELETE FROM users WHERE id = ?", [id]);
+    const { error } = await supabase.from("users").delete().eq("id", id);
+    if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -26,23 +27,31 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: "Valid role is required (admin, instructor, student)" }, { status: 400 });
     }
 
+    const updateData = {
+      email,
+      full_name: full_name || null,
+      role,
+      program_id: (role === "student" && program) ? program : null,
+    };
+
     if (password && password.trim().length > 0) {
-      await query(
-        "UPDATE users SET email = ?, full_name = ?, role = ?, password = ?, program_id = ? WHERE id = ?",
-      [email, full_name || null, role, password.trim(), (role === "student" && program) ? program : null, id]
-      );
-    } else {
-      await query(
-        "UPDATE users SET email = ?, full_name = ?, role = ?, program_id = ? WHERE id = ?",
-      [email, full_name || null, role, (role === "student" && program) ? program : null, id]
-      );
+      updateData.password = password.trim();
+    }
+
+    const { error } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("id", id);
+
+    if (error) {
+      if (error.code === '23505') { // Postgres unique violation
+        return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
+      }
+      throw error;
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") {
-      return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
-    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

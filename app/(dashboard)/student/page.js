@@ -1,26 +1,50 @@
 import { cookies } from "next/headers";
 import { Greeting } from "@/components/dashboard/Greeting";
 import { StudentDashboardContent } from "@/components/dashboard/StudentDashboardContent";
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import { BookOpen } from "lucide-react";
 
 async function getStudentCourses(studentId) {
   try {
-    const rows = await query(
-      `SELECT c.id, c.code, c.title, c.units, 
-              p.full_name as instructor_name,
-              s.id as syllabus_id,
-              s.status as syllabus_status,
-              s.version as syllabus_version
-       FROM enrollments e
-       JOIN courses c ON e.course_id = c.id
-       LEFT JOIN syllabi s ON s.course_id = c.id AND s.status = 'approved'
-       LEFT JOIN users p ON s.instructor_id = p.id
-       WHERE e.user_id = ?
-       ORDER BY c.code ASC`,
-      [studentId]
-    );
-    return rows || [];
+    const { data: enrollments, error } = await supabase
+      .from("enrollments")
+      .select(`
+        course_id,
+        courses ( id, code, title, units )
+      `)
+      .eq("user_id", studentId);
+      
+    if (error || !enrollments) return [];
+    
+    const courseIds = enrollments.map(e => e.course_id).filter(Boolean);
+    if (courseIds.length === 0) return [];
+
+    const { data: syllabi } = await supabase
+      .from("syllabi")
+      .select(`
+        id, course_id, status, version,
+        users ( full_name )
+      `)
+      .in("course_id", courseIds)
+      .eq("status", "approved");
+      
+    const courses = enrollments.map(e => {
+      const c = e.courses || {};
+      const s = syllabi?.find(syl => syl.course_id === c.id) || {};
+      return {
+        id: c.id,
+        code: c.code,
+        title: c.title,
+        units: c.units,
+        instructor_name: s.users?.full_name || null,
+        syllabus_id: s.id || null,
+        syllabus_status: s.status || null,
+        syllabus_version: s.version || null
+      };
+    });
+    
+    courses.sort((a, b) => (a.code || "").localeCompare(b.code || ""));
+    return courses;
   } catch (error) {
     console.error("Failed to query student courses:", error);
     return [];

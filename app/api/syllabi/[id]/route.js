@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
@@ -7,89 +7,77 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params;
 
-    // 1. Get syllabus metadata (with modern fields)
-    const syllabi = await query(
-      `SELECT s.id, s.course_id, s.instructor_id, s.status, s.version, s.approval_comment, s.updated_at,
-              s.course_description, s.prerequisites, s.corequisites, s.semester, s.academic_year,
-              s.vision, s.mission, s.quality_policy, s.institutional_outcomes,
-              s.program_outcomes, s.course_outcomes, s.performance_indicators, s.campus_goals,
-              c.code, c.title, c.units, c.program_id,
-              p.full_name as instructor_name, p.email as instructor_email
-       FROM syllabi s
-       LEFT JOIN courses c ON s.course_id = c.id
-       LEFT JOIN users p ON s.instructor_id = p.id
-       WHERE s.id = ?
-       LIMIT 1`,
-      [id]
-    );
+    // 1. Get syllabus metadata
+    const { data: syllabi, error } = await supabase
+      .from("syllabi")
+      .select(`
+        id, course_id, instructor_id, status, version, approval_comment, updated_at,
+        course_description, prerequisites, corequisites, semester, academic_year,
+        vision, mission, quality_policy, institutional_outcomes,
+        program_outcomes, course_outcomes, performance_indicators, campus_goals,
+        courses ( id, code, title, units, program_id ),
+        users ( id, full_name, email )
+      `)
+      .eq("id", id)
+      .single();
 
-    const syllabus = syllabi[0];
-    if (!syllabus) {
+    if (error || !syllabi) {
       return NextResponse.json({ error: "Syllabus not found" }, { status: 404 });
     }
 
+    const syllabus = {
+      ...syllabi,
+      code: syllabi.courses?.code,
+      title: syllabi.courses?.title,
+      units: syllabi.courses?.units,
+      program_id: syllabi.courses?.program_id,
+      instructor_name: syllabi.users?.full_name,
+      instructor_email: syllabi.users?.email
+    };
+
+    delete syllabus.courses;
+    delete syllabus.users;
+
     // 2. Get Learning Outcomes
-    const outcomes = await query(
-      "SELECT id, description, order_index FROM learning_outcomes WHERE syllabus_id = ? ORDER BY order_index ASC",
-      [id]
-    );
+    const { data: outcomes } = await supabase
+      .from("learning_outcomes")
+      .select("id, description, order_index")
+      .eq("syllabus_id", id)
+      .order("order_index", { ascending: true });
 
     // 3. Get Weekly Plans
-    const plans = await query(
-      `SELECT id, week, topic, activities, assessments, materials, order_index, 
-              desired_learning_outcomes, clo_alignment 
-       FROM weekly_plans 
-       WHERE syllabus_id = ? 
-       ORDER BY week ASC, order_index ASC`,
-      [id]
-    );
+    const { data: plans } = await supabase
+      .from("weekly_plans")
+      .select(`
+        id, week, topic, activities, assessments, materials, order_index, 
+        desired_learning_outcomes, clo_alignment
+      `)
+      .eq("syllabus_id", id)
+      .order("week", { ascending: true })
+      .order("order_index", { ascending: true });
 
     // 4. Get Grading Components
-    const components = await query(
-      "SELECT id, name, percentage, order_index FROM grading_components WHERE syllabus_id = ? ORDER BY order_index ASC",
-      [id]
-    );
-
-    // Parse JSON columns in metadata if they are strings
-    try {
-      syllabus.institutional_outcomes = syllabus.institutional_outcomes ? JSON.parse(syllabus.institutional_outcomes) : [];
-    } catch {
-      syllabus.institutional_outcomes = [];
-    }
-    try {
-      syllabus.program_outcomes = syllabus.program_outcomes ? JSON.parse(syllabus.program_outcomes) : [];
-    } catch {
-      syllabus.program_outcomes = [];
-    }
-    try {
-      syllabus.course_outcomes = syllabus.course_outcomes ? JSON.parse(syllabus.course_outcomes) : [];
-    } catch {
-      syllabus.course_outcomes = [];
-    }
-    try {
-      syllabus.performance_indicators = syllabus.performance_indicators ? JSON.parse(syllabus.performance_indicators) : [];
-    } catch {
-      syllabus.performance_indicators = [];
-    }
-    try {
-      syllabus.campus_goals = syllabus.campus_goals ? JSON.parse(syllabus.campus_goals) : [];
-    } catch {
-      syllabus.campus_goals = [];
-    }
-
-    // Parse week alignments
-    plans.forEach(p => {
-      try {
-        p.clo_alignment = p.clo_alignment ? JSON.parse(p.clo_alignment) : [];
-      } catch {
-        p.clo_alignment = [];
-      }
-    });
+    const { data: components } = await supabase
+      .from("grading_components")
+      .select("id, name, percentage, order_index")
+      .eq("syllabus_id", id)
+      .order("order_index", { ascending: true });
 
     // Pack details
-    syllabus.learning_outcomes = outcomes;
-    syllabus.weekly_plans = plans;
-    syllabus.grading_components = components;
+    syllabus.learning_outcomes = outcomes || [];
+    syllabus.weekly_plans = plans || [];
+    syllabus.grading_components = components || [];
+
+    // Supabase pg driver returns JSONB automatically as objects, no need to JSON.parse!
+    syllabus.institutional_outcomes = syllabus.institutional_outcomes || [];
+    syllabus.program_outcomes = syllabus.program_outcomes || [];
+    syllabus.course_outcomes = syllabus.course_outcomes || [];
+    syllabus.performance_indicators = syllabus.performance_indicators || [];
+    syllabus.campus_goals = syllabus.campus_goals || [];
+
+    syllabus.weekly_plans.forEach(p => {
+      p.clo_alignment = p.clo_alignment || [];
+    });
 
     return NextResponse.json({ syllabus });
   } catch (error) {
@@ -133,93 +121,84 @@ export async function PUT(request, { params }) {
     }
 
     // 1. Check if exists and retrieve current version
-    const currentRows = await query("SELECT status, version FROM syllabi WHERE id = ? LIMIT 1", [id]);
-    const current = currentRows[0];
-    if (!current) {
+    const { data: current, error: checkError } = await supabase
+      .from("syllabi")
+      .select("status, version")
+      .eq("id", id)
+      .single();
+
+    if (checkError || !current) {
       return NextResponse.json({ error: "Syllabus does not exist" }, { status: 404 });
     }
 
-    // Determine new version (if approved and re-edited, increment version. Otherwise keep current)
     let newVersion = current.version;
     if (current.status === "approved" && status === "submitted") {
       newVersion = current.version + 1;
     }
 
     // 2. Update parent syllabus metadata
-    await query(
-      `UPDATE syllabi SET 
-        course_id = ?, status = ?, version = ?, approval_comment = NULL, updated_at = CURRENT_TIMESTAMP,
-        course_description = ?, prerequisites = ?, corequisites = ?, semester = ?, academic_year = ?,
-        vision = ?, mission = ?, quality_policy = ?, institutional_outcomes = ?,
-        program_outcomes = ?, course_outcomes = ?, performance_indicators = ?, campus_goals = ?
-       WHERE id = ?`,
-      [
-        courseId,
-        status || "draft",
-        newVersion,
-        courseDescription || "",
-        prerequisites || "",
-        corequisites || "",
-        semester || "",
-        academicYear || "",
-        vision || "",
-        mission || "",
-        qualityPolicy || "",
-        JSON.stringify(institutionalOutcomes || []),
-        JSON.stringify(programOutcomes || []),
-        JSON.stringify(courseOutcomes || []),
-        JSON.stringify(performanceIndicators || []),
-        JSON.stringify(campusGoals || []),
-        id
-      ]
-    );
+    const { error: updateError } = await supabase.from("syllabi").update({
+      course_id: courseId,
+      status: status || "draft",
+      version: newVersion,
+      approval_comment: null,
+      course_description: courseDescription || "",
+      prerequisites: prerequisites || "",
+      corequisites: corequisites || "",
+      semester: semester || "",
+      academic_year: academicYear || "",
+      vision: vision || "",
+      mission: mission || "",
+      quality_policy: qualityPolicy || "",
+      institutional_outcomes: institutionalOutcomes || [],
+      program_outcomes: programOutcomes || [],
+      course_outcomes: courseOutcomes || [],
+      performance_indicators: performanceIndicators || [],
+      campus_goals: campusGoals || []
+    }).eq("id", id);
+
+    if (updateError) throw updateError;
 
     // 3. Clear old child rows
-    await query("DELETE FROM learning_outcomes WHERE syllabus_id = ?", [id]);
-    await query("DELETE FROM weekly_plans WHERE syllabus_id = ?", [id]);
-    await query("DELETE FROM grading_components WHERE syllabus_id = ?", [id]);
+    await supabase.from("learning_outcomes").delete().eq("syllabus_id", id);
+    await supabase.from("weekly_plans").delete().eq("syllabus_id", id);
+    await supabase.from("grading_components").delete().eq("syllabus_id", id);
 
     // 4. Re-insert Learning Outcomes
     if (learningOutcomes && learningOutcomes.length > 0) {
-      for (let i = 0; i < learningOutcomes.length; i++) {
-        await query(
-          "INSERT INTO learning_outcomes (id, syllabus_id, description, order_index) VALUES (?, ?, ?, ?)",
-          [crypto.randomUUID(), id, learningOutcomes[i].description, i + 1]
-        );
-      }
+      const loInserts = learningOutcomes.map((lo, i) => ({
+        id: crypto.randomUUID(), syllabus_id: id, description: lo.description, order_index: i + 1
+      }));
+      await supabase.from("learning_outcomes").insert(loInserts);
     }
 
     // 5. Re-insert Weekly Plans
     if (weeklyPlans && weeklyPlans.length > 0) {
-      for (let i = 0; i < weeklyPlans.length; i++) {
-        const p = weeklyPlans[i];
-        await query(
-          "INSERT INTO weekly_plans (id, syllabus_id, week, topic, activities, assessments, materials, order_index, desired_learning_outcomes, clo_alignment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [
-            crypto.randomUUID(),
-            id,
-            p.week,
-            p.topic,
-            p.activities || "",
-            p.assessments || "",
-            p.materials || "",
-            i + 1,
-            p.desiredLearningOutcomes || "",
-            JSON.stringify(p.cloAlignment || [])
-          ]
-        );
-      }
+      const wpInserts = weeklyPlans.map((p, i) => ({
+        id: crypto.randomUUID(),
+        syllabus_id: id,
+        week: p.week,
+        topic: p.topic,
+        activities: p.activities || "",
+        assessments: p.assessments || "",
+        materials: p.materials || "",
+        order_index: i + 1,
+        desired_learning_outcomes: p.desiredLearningOutcomes || "",
+        clo_alignment: p.cloAlignment || []
+      }));
+      await supabase.from("weekly_plans").insert(wpInserts);
     }
 
     // 6. Re-insert Grading Components
     if (gradingComponents && gradingComponents.length > 0) {
-      for (let i = 0; i < gradingComponents.length; i++) {
-        const g = gradingComponents[i];
-        await query(
-          "INSERT INTO grading_components (id, syllabus_id, name, percentage, order_index) VALUES (?, ?, ?, ?, ?)",
-          [crypto.randomUUID(), id, g.name, g.percentage, i + 1]
-        );
-      }
+      const gcInserts = gradingComponents.map((g, i) => ({
+        id: crypto.randomUUID(),
+        syllabus_id: id,
+        name: g.name,
+        percentage: g.percentage,
+        order_index: i + 1
+      }));
+      await supabase.from("grading_components").insert(gcInserts);
     }
 
     return NextResponse.json({ success: true });

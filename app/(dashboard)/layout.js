@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import { DashboardLayoutShell } from "@/components/dashboard/DashboardLayoutShell";
 
 export default async function DashboardLayout({ children }) {
@@ -15,8 +15,15 @@ export default async function DashboardLayout({ children }) {
   // Fetch full profile details from the database
   let user = null;
   try {
-    const users = await query("SELECT id, full_name, email, role FROM users WHERE id = ? LIMIT 1", [userId]);
-    user = users[0];
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, full_name, email, role")
+      .eq("id", userId)
+      .single();
+
+    if (!error && data) {
+      user = data;
+    }
   } catch (error) {
     console.error("Failed to query user profile in dashboard layout:", error);
   }

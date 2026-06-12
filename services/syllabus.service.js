@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 
 const DEFAULT_SYLLABUS_STATUS = "draft";
 const DEFAULT_SYLLABUS_VERSION = 1;
@@ -9,20 +9,26 @@ export async function saveSyllabusDraft(payload) {
     return { error: "Syllabus ID is required." };
   }
 
-  await query(
-    "insert into syllabi (id, status, version) values (?, ?, ?) on duplicate key update updated_at = utc_timestamp()",
-    [payload.id, DEFAULT_SYLLABUS_STATUS, DEFAULT_SYLLABUS_VERSION],
-  );
+  const { data, error } = await supabase
+    .from("syllabi")
+    .upsert({
+      id: payload.id,
+      status: DEFAULT_SYLLABUS_STATUS,
+      version: DEFAULT_SYLLABUS_VERSION,
+      updated_at: new Date().toISOString()
+    })
+    .select("updated_at")
+    .single();
 
-  const updatedRows = await query("select updated_at from syllabi where id = ? limit 1", [payload.id]);
-  const updatedAt = updatedRows[0]?.updated_at
-    ? new Date(updatedRows[0].updated_at).toISOString()
-    : new Date().toISOString();
+  if (error) {
+    console.error("Error saving syllabus draft:", error);
+    return { error: "Database error." };
+  }
 
   return {
     data: {
       ...payload,
-      updated_at: updatedAt,
+      updated_at: data.updated_at,
     },
   };
 }
@@ -33,13 +39,20 @@ export async function createMaterial({ syllabusId, fileUrl, fileName, fileType }
   }
 
   const id = randomUUID();
-  await query("insert into materials (id, syllabus_id, file_url, file_name, file_type) values (?, ?, ?, ?, ?)", [
-    id,
-    syllabusId,
-    fileUrl,
-    fileName,
-    fileType || null,
-  ]);
+  const { error } = await supabase
+    .from("materials")
+    .insert([{
+      id,
+      syllabus_id: syllabusId,
+      file_url: fileUrl,
+      file_name: fileName,
+      file_type: fileType || null,
+    }]);
+
+  if (error) {
+    console.error("Error creating material:", error);
+    return null;
+  }
 
   return id;
 }

@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
@@ -31,20 +31,26 @@ export async function POST(request) {
       const generatedPassword = `pup_${emailPrefix}`;
       const activePassword = (password && password.trim()) || generatedPassword;
 
-      try {
-        await query(
-          "INSERT INTO users (id, full_name, email, role, password) VALUES (?, ?, ?, 'student', ?)",
-          [id, fullName || null, email.trim().toLowerCase(), activePassword]
-        );
-        results.success++;
-        results.imported.push({ email: email.trim().toLowerCase(), fullName, password: activePassword });
-      } catch (err) {
+      const { error } = await supabase
+        .from("users")
+        .insert([{
+          id,
+          full_name: fullName || null,
+          email: email.trim().toLowerCase(),
+          role: "student",
+          password: activePassword
+        }]);
+
+      if (error) {
         results.failed++;
-        if (err.code === "ER_DUP_ENTRY") {
+        if (error.code === '23505') { // Postgres unique violation
           results.errors.push({ email, reason: "Email already exists" });
         } else {
-          results.errors.push({ email, reason: err.message });
+          results.errors.push({ email, reason: error.message });
         }
+      } else {
+        results.success++;
+        results.imported.push({ email: email.trim().toLowerCase(), fullName, password: activePassword });
       }
     }
 

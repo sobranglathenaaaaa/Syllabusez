@@ -334,10 +334,11 @@ export default function AdminCurriculumPage() {
 
       {/* ── Curriculum Preview ── */}
       {previewProgram && (
-        <div className="bg-white rounded-3xl border border-gray-200 shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
 
-          {/* Preview header */}
-          <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
+            {/* Preview header */}
+            <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-50 text-[#800000] rounded-xl"><BookOpen className="w-5 h-5" /></div>
               <div>
@@ -356,7 +357,7 @@ export default function AdminCurriculumPage() {
           </div>
 
           {/* Content */}
-          <div className="p-6 lg:p-10 space-y-8">
+          <div className="p-6 lg:p-10 space-y-8 overflow-y-auto flex-1">
             {customCurricula[previewProgram.id] ? (
               /* ── Uploaded file view ── */
               (() => {
@@ -576,6 +577,7 @@ export default function AdminCurriculumPage() {
               </div>
             )}
           </div>
+        </div>
         </div>
       )}
     </div>

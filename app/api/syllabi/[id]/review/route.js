@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -18,11 +18,15 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "Invalid review status. Must be 'approved' or 'rejected'." }, { status: 400 });
     }
 
-    // Update parent status and approval comment
-    await query(
-      "UPDATE syllabi SET status = ?, approval_comment = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-      [status, comment || null, id]
-    );
+    const { error } = await supabase
+      .from("syllabi")
+      .update({
+        status,
+        approval_comment: comment || null
+      })
+      .eq("id", id);
+
+    if (error) throw error;
 
     return NextResponse.json({ success: true, message: `Syllabus status successfully updated to ${status}.` });
   } catch (error) {

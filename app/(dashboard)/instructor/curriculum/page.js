@@ -17,7 +17,7 @@ export default function InstructorCurriculumPage() {
   const [loading, setLoading] = useState(true);
   const [customCurricula, setCustomCurricula] = useState({});
   const [courses, setCourses] = useState([]);
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("document");
   const [previewText, setPreviewText] = useState("");
   const [loadingText, setLoadingText] = useState(false);
   const selectedDepartmentObject = departments.find(d => d.id === selectedDept);
@@ -42,10 +42,12 @@ export default function InstructorCurriculumPage() {
       setCourses(coursesData.courses || []);
 
       const bsitDept = depts.find(d => d.name.includes("Information Technology"));
-      if (bsitDept) {
-        setSelectedDept(bsitDept.id);
-      } else if (depts.length > 0) {
-        setSelectedDept(depts[0].id);
+      const defaultDept = bsitDept ? bsitDept.id : depts[0]?.id;
+      if (defaultDept) {
+        setSelectedDept(defaultDept);
+        if (curriculaMap[defaultDept]) {
+          setViewMode("document");
+        }
       }
     } catch (error) {
       console.error("Failed to load curriculum:", error);
@@ -143,17 +145,151 @@ export default function InstructorCurriculumPage() {
         (() => {
           const sheet = customCurricula[selectedDept];
           const fileUrl = `/uploads/curricula/${selectedDept}_${sheet.file_name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+          const fileExt = sheet.file_name.split('.').pop().toLowerCase();
           const programCourses = courses.filter(c => c.program_id === selectedDept);
 
-          // Grouping
-          const grouped = {};
-          programCourses.forEach(course => {
-            const y = course.year_level || "UNASSIGNED";
-            const s = course.semester || "Unassigned Semester";
-            if (!grouped[y]) grouped[y] = {};
-            if (!grouped[y][s]) grouped[y][s] = [];
-            grouped[y][s].push(course);
-          });
+          // If no parsed courses exist, derive structured entries from the original document preview
+          const getEffectiveCourses = () => {
+            if (programCourses.length > 0) return programCourses;
+            if (!previewText) return [];
+
+            const raw = previewText.replace(/<br\/?\s*>/gi, "\n").replace(/<[^>]+>/g, "\n").replace(/\u00A0/g, ' ').trim();
+            const lines = raw.split(/\r?\n/).map(l => l.replace(/\s{2,}/g, ' ').trim()).filter(Boolean);
+
+            const parseLine = (ln) => {
+              let code = '';
+              let title = ln;
+              let units = '';
+
+              const mCode = ln.match(/^([A-Z]{2,}\s*\d{1,4}[A-Z]?)[\-:\s]+(.+)$/i);
+              if (mCode) {
+                code = mCode[1].replace(/\s+/g, ' ').trim();
+                title = mCode[2].trim();
+              }
+
+              const mUnits = title.match(/(\(|-)?\s*(\d{1,2}(?:\.\d+)?)\s*(units?)?\)?\s*$/i);
+              if (mUnits) {
+                units = mUnits[2];
+                title = title.replace(mUnits[0], '').trim();
+              }
+
+              if (!code) {
+                const mInner = ln.match(/([A-Z]{2,}\s*\d{1,4}[A-Z]?)/i);
+                if (mInner) code = mInner[1].replace(/\s+/g, ' ').trim();
+              }
+
+              return {
+                id: `doc-${Math.random().toString(36).slice(2,9)}`,
+                code,
+                title,
+                units: units || '',
+                prereq: '',
+                coreq: '',
+                year_level: 'UNASSIGNED',
+                semester: 'Unassigned Semester'
+              };
+            };
+
+            let currentYear = 'UNASSIGNED';
+            let currentSemester = 'Unassigned Semester';
+
+            const yearPatterns = [
+              [/first year/i, 'FIRST YEAR'], [/1st year/i, 'FIRST YEAR'], [/year 1/i, 'FIRST YEAR'],
+              [/second year/i, 'SECOND YEAR'], [/2nd year/i, 'SECOND YEAR'], [/year 2/i, 'SECOND YEAR'],
+              [/third year/i, 'THIRD YEAR'], [/3rd year/i, 'THIRD YEAR'], [/year 3/i, 'THIRD YEAR'],
+              [/fourth year/i, 'FOURTH YEAR'], [/4th year/i, 'FOURTH YEAR'], [/year 4/i, 'FOURTH YEAR']
+            ];
+
+            const semPatterns = [
+              [/1st semester/i, '1st Semester'], [/first semester/i, '1st Semester'], [/semester 1/i, '1st Semester'],
+              [/2nd semester/i, '2nd Semester'], [/second semester/i, '2nd Semester'], [/semester 2/i, '2nd Semester'],
+              [/summer/i, 'Summer Term'], [/summer term/i, 'Summer Term']
+            ];
+
+            const parsed = [];
+            for (const ln of lines) {
+              const low = ln.toLowerCase();
+              let matchedHeading = false;
+              for (const [rx, name] of yearPatterns) {
+                if (rx.test(low)) { currentYear = name; matchedHeading = true; }
+              }
+              for (const [rx, name] of semPatterns) {
+                if (rx.test(low)) { currentSemester = name; matchedHeading = true; }
+              }
+              if (matchedHeading) continue;
+
+              const entry = parseLine(ln);
+              entry.year_level = currentYear;
+              entry.semester = currentSemester;
+              if ((entry.title && entry.title.length > 5) || entry.code) parsed.push(entry);
+            }
+            return parsed;
+          };
+
+          const renderOriginalDocumentSection = () => {
+            if (fileExt === "pdf") {
+              return (
+                <div className="bg-white border border-gray-100 shadow-sm rounded-3xl overflow-hidden">
+                  <div className="px-4 py-3 bg-[#800000]/5 border-b border-gray-100">
+                    <h5 className="font-extrabold text-xs uppercase tracking-wider text-gray-800">Original Curriculum Document</h5>
+                  </div>
+                  <div className="h-[48vh]">
+                    <object data={fileUrl} type="application/pdf" className="w-full h-full" aria-label="PDF Viewer">
+                      <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500 p-8">
+                        <p className="text-xs text-center">Your browser cannot display this PDF inline.</p>
+                        <a href={fileUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-[#800000] text-white text-xs font-bold rounded-xl">Open PDF in new tab</a>
+                      </div>
+                    </object>
+                  </div>
+                </div>
+              );
+            }
+
+            if (fileExt === "txt") {
+              return (
+                <div className="bg-white border border-gray-100 shadow-sm rounded-3xl overflow-hidden">
+                  <div className="px-4 py-3 bg-[#800000]/5 border-b border-gray-100">
+                    <h5 className="font-extrabold text-xs uppercase tracking-wider text-gray-800">Original Curriculum Document</h5>
+                  </div>
+                  <div className="p-6 bg-gray-50 text-xs text-gray-800 whitespace-pre-wrap overflow-y-auto max-h-[48vh] font-mono">
+                    {previewText}
+                  </div>
+                </div>
+              );
+            }
+
+            if (fileExt === "docx") {
+              return (
+                <div className="bg-white border border-gray-100 shadow-sm rounded-3xl overflow-hidden">
+                  <div className="px-4 py-3 bg-[#800000]/5 border-b border-gray-100">
+                    <h5 className="font-extrabold text-xs uppercase tracking-wider text-gray-800">Original Curriculum Document</h5>
+                  </div>
+                  <div className="p-6 bg-gray-50 overflow-y-auto max-h-[48vh] text-sm text-gray-800">
+                    {loadingText ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="w-8 h-8 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewText }} />
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          };
+
+                // Grouping — use effective courses (DB or derived from original document)
+                const effectiveCourses = getEffectiveCourses();
+                const grouped = {};
+                effectiveCourses.forEach(course => {
+                  const y = course.year_level || "UNASSIGNED";
+                  const s = course.semester || "Unassigned Semester";
+                  if (!grouped[y]) grouped[y] = {};
+                  if (!grouped[y][s]) grouped[y][s] = [];
+                  grouped[y][s].push(course);
+                });
 
           const yearOrder = { "FIRST YEAR": 1, "SECOND YEAR": 2, "THIRD YEAR": 3, "FOURTH YEAR": 4 };
           const semesterOrder = { "1st Semester": 1, "2nd Semester": 2, "Summer Term": 3 };
@@ -309,36 +445,39 @@ export default function InstructorCurriculumPage() {
                   })()}
                 </div>
               ) : (
-                programCourses.length === 0 ? (
-                  <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
-                    <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                    <span className="text-xs font-semibold">No parsed courses found. Reference curriculum might be empty.</span>
-                  </div>
-                ) : (
-                  <div className="space-y-10">
-                    {sortedYears.map(year => {
-                      const yearSemesters = grouped[year];
-                      const sortedSemesters = Object.keys(yearSemesters).sort((a, b) => {
-                        return (semesterOrder[a] || 99) - (semesterOrder[b] || 99);
-                      });
+                <div className="space-y-8">
+                      {renderOriginalDocumentSection()}
+                      {effectiveCourses.length === 0 ? (
+                    <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
+                      <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                      <span className="text-xs font-semibold">No parsed courses found. Reference curriculum might be empty.</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-10">
+                      {sortedYears.map(year => {
+                        const yearSemesters = grouped[year];
+                        const sortedSemesters = Object.keys(yearSemesters).sort((a, b) => {
+                          return (semesterOrder[a] || 99) - (semesterOrder[b] || 99);
+                        });
 
-                      return (
-                        <div key={year} className="space-y-4">
-                          <h4 className="text-xs font-black uppercase tracking-widest text-[#800000] bg-red-50/50 border-l-4 border-[#800000] pl-3 py-1.5 rounded-r-lg">
-                            {year}
-                          </h4>
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {sortedSemesters.map(sem => (
-                              <div key={sem}>
-                                {renderSemesterTable(`${year} – ${sem}`, yearSemesters[sem])}
-                              </div>
-                            ))}
+                        return (
+                          <div key={year} className="space-y-4">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-[#800000] bg-red-50/50 border-l-4 border-[#800000] pl-3 py-1.5 rounded-r-lg">
+                              {year}
+                            </h4>
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                              {sortedSemesters.map(sem => (
+                                <div key={sem}>
+                                  {renderSemesterTable(`${year} – ${sem}`, yearSemesters[sem])}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           );

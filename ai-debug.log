@@ -1,0 +1,14 @@
+AI Response:
+```json
+[
+  {
+    "year_level": "FIRST YEAR",
+    "semester": "1st Semester",
+    "code": "GEED 032",
+    "title": "Filipinolohiya at Pambansang Kaunlaran",
+    "units": 3,
+    "prereq": "",
+    
+
+Failed to extract JSON array. Extracted:
+null

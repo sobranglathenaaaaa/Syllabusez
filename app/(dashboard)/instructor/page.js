@@ -1,20 +1,21 @@
 import { cookies } from "next/headers";
 import { Greeting } from "@/components/dashboard/Greeting";
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import Link from "next/link";
 import { FileText, Clock, CheckCircle, File, Plus, Edit2, Eye } from "lucide-react";
 
 async function getInstructorStats(instructorId) {
   try {
-    const [total] = await query("SELECT COUNT(*) as count FROM syllabi WHERE instructor_id = ?", [instructorId]);
-    const [drafts] = await query("SELECT COUNT(*) as count FROM syllabi WHERE instructor_id = ? AND status = 'draft'", [instructorId]);
-    const [pending] = await query("SELECT COUNT(*) as count FROM syllabi WHERE instructor_id = ? AND status = 'submitted'", [instructorId]);
-    const [approved] = await query("SELECT COUNT(*) as count FROM syllabi WHERE instructor_id = ? AND status = 'approved'", [instructorId]);
+    const { count: total } = await supabase.from("syllabi").select('*', { count: 'exact', head: true }).eq('instructor_id', instructorId);
+    const { count: drafts } = await supabase.from("syllabi").select('*', { count: 'exact', head: true }).eq('instructor_id', instructorId).eq('status', 'draft');
+    const { count: pending } = await supabase.from("syllabi").select('*', { count: 'exact', head: true }).eq('instructor_id', instructorId).eq('status', 'submitted');
+    const { count: approved } = await supabase.from("syllabi").select('*', { count: 'exact', head: true }).eq('instructor_id', instructorId).eq('status', 'approved');
+
     return {
-      total: total?.count ?? 0,
-      drafts: drafts?.count ?? 0,
-      pending: pending?.count ?? 0,
-      approved: approved?.count ?? 0,
+      total: total ?? 0,
+      drafts: drafts ?? 0,
+      pending: pending ?? 0,
+      approved: approved ?? 0,
     };
   } catch (error) {
     console.error("Failed to query instructor stats:", error);
@@ -24,16 +25,26 @@ async function getInstructorStats(instructorId) {
 
 async function getRecentSyllabi(instructorId) {
   try {
-    const rows = await query(
-      `SELECT s.id, c.code, c.title as course_title, s.status, s.version, s.updated_at 
-       FROM syllabi s 
-       LEFT JOIN courses c ON s.course_id = c.id 
-       WHERE s.instructor_id = ? 
-       ORDER BY s.updated_at DESC 
-       LIMIT 5`,
-      [instructorId]
-    );
-    return rows || [];
+    const { data: rows, error } = await supabase
+      .from("syllabi")
+      .select(`
+        id, status, version, updated_at,
+        courses ( code, title )
+      `)
+      .eq('instructor_id', instructorId)
+      .order('updated_at', { ascending: false })
+      .limit(5);
+
+    if (error) throw error;
+
+    return (rows || []).map(r => ({
+      id: r.id,
+      status: r.status,
+      version: r.version,
+      updated_at: r.updated_at,
+      code: r.courses?.code,
+      course_title: r.courses?.title
+    }));
   } catch (error) {
     console.error("Failed to query recent syllabi:", error);
     return [];

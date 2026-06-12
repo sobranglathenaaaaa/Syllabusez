@@ -32,6 +32,13 @@ CREATE TABLE courses (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE course_instructors (
+  course_id VARCHAR(36) REFERENCES courses(id) ON DELETE CASCADE,
+  instructor_id VARCHAR(36) REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY(course_id, instructor_id)
+);
+
 CREATE TABLE curricula (
   program_id VARCHAR(36) PRIMARY KEY REFERENCES programs(id) ON DELETE CASCADE,
   file_name VARCHAR(255) NOT NULL,

@@ -27,34 +27,86 @@ function normalizeText(text) {
 function extractJsonArrayFromText(text) {
   const raw = String(text || "").trim();
 
-  const tryParse = (candidate) => {
+  // Try direct parse first
+  try {
+    const direct = JSON.parse(raw);
+    if (Array.isArray(direct)) return direct;
+    if (direct && Array.isArray(direct.courses)) return direct.courses;
+  } catch (e) {}
+
+  // Find the first '[' and attempt to parse a JSON array using multiple strategies.
+  const startIdx = raw.indexOf("[");
+  if (startIdx === -1) return null;
+
+  // Strategy 1: try to find the last ']' and parse the slice directly
+  const lastBracketIdx = raw.lastIndexOf("]");
+  if (lastBracketIdx > startIdx) {
+    const slice = raw.slice(startIdx, lastBracketIdx + 1);
     try {
-      const data = JSON.parse(candidate);
-      if (Array.isArray(data)) return data;
-      if (data && Array.isArray(data.courses)) return data.courses;
-      if (data && Array.isArray(data.items)) return data.items;
-    } catch (err) {
-      return null;
+      const parsed = JSON.parse(slice);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && Array.isArray(parsed.courses)) return parsed.courses;
+    } catch (e) {
+      // fall through to more robust attempts
     }
-    return null;
-  };
-
-  if (raw.startsWith("[") || raw.startsWith("{")) {
-    const parsed = tryParse(raw);
-    if (parsed) return parsed;
   }
 
-  const jsonMatch = raw.match(/\[\s*\{[\s\S]*?\}\s*\]/m);
-  if (jsonMatch) {
-    const parsed = tryParse(jsonMatch[0]);
-    if (parsed) return parsed;
+  // Strategy 2: attempt to repair common truncation by balancing brackets
+  // Walk forward and maintain bracket depth; if we reach EOF with depth>0, append closing brackets.
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = startIdx; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escape) escape = false;
+      else if (ch === "\\") escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    } else {
+      if (ch === '"') { inString = true; continue; }
+      if (ch === "[") depth++;
+      if (ch === "]") depth--;
+    }
   }
 
-  const start = raw.indexOf("[");
-  const end = raw.lastIndexOf("]");
-  if (start !== -1 && end !== -1 && end > start) {
-    const parsed = tryParse(raw.slice(start, end + 1));
-    if (parsed) return parsed;
+  // If we ended with depth > 0, try appending that many ']' and parse
+  if (depth > 0) {
+    const candidate = raw.slice(startIdx) + "]".repeat(depth);
+    try {
+      const parsed = JSON.parse(candidate);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && Array.isArray(parsed.courses)) return parsed.courses;
+    } catch (e) {
+      // continue
+    }
+  }
+
+  // Strategy 3: progressively trim trailing characters from the first '[' forward
+  // and try to parse a shorter substring. This can succeed if the AI appended extra text
+  // after a valid JSON block that breaks parsing.
+  const maxTrim = Math.min(2000, raw.length - startIdx);
+  for (let trim = 0; trim < maxTrim; trim += 50) {
+    const end = raw.length - trim;
+    if (end <= startIdx) break;
+    const candidate = raw.slice(startIdx, end);
+    try {
+      const parsed = JSON.parse(candidate);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && Array.isArray(parsed.courses)) return parsed.courses;
+    } catch (e) {
+      // ignore and continue
+    }
+  }
+
+  // Strategy 4: fallback regex non-greedy block search (best-effort)
+  const bracketMatch = raw.match(/\[\s*\{[\s\S]*?\}\s*\]/m);
+  if (bracketMatch) {
+    try {
+      const parsed = JSON.parse(bracketMatch[0]);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && Array.isArray(parsed.courses)) return parsed.courses;
+    } catch (e) {}
   }
 
   return null;
@@ -224,17 +276,37 @@ async function extractCoursesFromText(text, programId) {
 
   if (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY) {
     try {
-      const aiResponse = await callGenerativeExtraction(normalized);
-      require("fs").writeFileSync("ai-debug.log", "AI Response:\n" + aiResponse);
-      const extracted = extractJsonArrayFromText(aiResponse);
-      if (Array.isArray(extracted) && extracted.length > 0) {
-        parsedCourses = extracted.map(normalizeCourseObject);
-      } else {
-        require("fs").appendFileSync("ai-debug.log", "\n\nFailed to extract JSON array. Extracted:\n" + JSON.stringify(extracted));
+      // Try AI extraction, with a couple retries if the output looks malformed/truncated.
+      let aiResponse = null;
+      let extracted = null;
+      const maxAttempts = 3;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          aiResponse = await callGenerativeExtraction(normalized);
+        } catch (callErr) {
+          require("fs").appendFileSync("ai-debug.log", new Date().toISOString() + ` - AI call failed on attempt ${attempt}: ${callErr.message}\n`);
+          if (attempt === maxAttempts) throw callErr;
+          continue;
+        }
+
+        // Write the raw AI response with attempt marker
+        require("fs").appendFileSync("ai-debug.log", `${new Date().toISOString()} - AI Response (attempt ${attempt}):\n` + aiResponse + "\n\n");
+
+        extracted = extractJsonArrayFromText(aiResponse);
+        if (Array.isArray(extracted) && extracted.length > 0) {
+          parsedCourses = extracted.map(normalizeCourseObject);
+          break;
+        }
+
+        // If extraction failed, log and retry — the AI sometimes returns truncated output.
+        require("fs").appendFileSync("ai-debug.log", new Date().toISOString() + ` - Failed to extract JSON array on attempt ${attempt}. Extracted: ` + JSON.stringify(extracted) + "\n\n");
+
+        // Small backoff before retrying
+        await new Promise((res) => setTimeout(res, 500 * attempt));
       }
     } catch (aiError) {
       console.error("AI extraction failed:", aiError.message);
-      require("fs").writeFileSync("ai-debug.log", "AI Error:\n" + aiError.message);
+      require("fs").appendFileSync("ai-debug.log", new Date().toISOString() + " - AI Error:\n" + aiError.message + "\n\n");
     }
   } else {
     console.warn("No Gemini/OpenAI API key configured; falling back to local heuristics.");
@@ -289,6 +361,18 @@ async function extractCoursesFromText(text, programId) {
 
 export async function GET() {
   try {
+    const cookieStore = cookies();
+    const userId = cookieStore.get("session_user")?.value || cookieStore.get("session_user_id")?.value;
+
+    if (userId) {
+      const { data: user, error: userErr } = await supabase.from("users").select("role, program_id").eq("id", userId).single();
+      if (!userErr && user && user.role === "student") {
+        const { data: rows, error } = await supabase.from("curricula").select("*").eq("program_id", user.program_id);
+        if (error) throw error;
+        return NextResponse.json({ curricula: rows });
+      }
+    }
+
     const { data: rows, error } = await supabase.from("curricula").select("*");
     if (error) throw error;
     return NextResponse.json({ curricula: rows });
@@ -391,3 +475,5 @@ export async function DELETE(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export { extractCoursesFromText };

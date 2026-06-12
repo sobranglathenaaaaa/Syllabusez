@@ -26,9 +26,21 @@ export default function SecuritySettings() {
       alert('New passwords do not match');
       return;
     }
-    console.log('Password change submitted', form);
-    // TODO: send to backend for password change
-    alert('Password changed (mock)');
+    (async () => {
+      try {
+        const res = await fetch("/api/user/password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentPassword: form.currentPassword, newPassword: form.newPassword })
+        });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || "Failed to change password");
+        alert("Password changed");
+        setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      } catch (err) {
+        alert(err.message || "Failed to change password");
+      }
+    })();
   };
 
   return (
@@ -74,13 +86,6 @@ export default function SecuritySettings() {
           </button>
         </div>
       </form>
-    </section>
-  );
-
-  return (
-    <section className="p-6 bg-gray-50 rounded-lg shadow-sm">
-      <h2 className="text-2xl font-semibold mb-4">Security Settings</h2>
-      <p className="text-gray-600">Configure password, two‑factor authentication, and other security options here.</p>
     </section>
   );
 }

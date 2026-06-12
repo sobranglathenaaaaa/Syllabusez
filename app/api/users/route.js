@@ -11,7 +11,7 @@ export async function GET(request) {
 
     let query = supabase
       .from("users")
-      .select("id, full_name, email, role, created_at")
+      .select("id, full_name, email, role, program_id, programs(name), created_at")
       .order("created_at", { ascending: false });
 
     if (search) {
@@ -53,7 +53,7 @@ export async function POST(request) {
         email,
         role,
         password: password || null,
-        program_id: (role === "student" && program) ? program : null
+        program_id: (["student", "instructor"].includes(role) && program) ? program : null
       }]);
 
     if (error) {

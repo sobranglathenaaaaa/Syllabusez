@@ -31,7 +31,7 @@ export async function PUT(request, { params }) {
       email,
       full_name: full_name || null,
       role,
-      program_id: (role === "student" && program) ? program : null,
+      program_id: (["student", "instructor"].includes(role) && program) ? program : null,
     };
 
     if (password && password.trim().length > 0) {

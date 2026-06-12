@@ -23,6 +23,7 @@ export default function AdminCurriculumPage() {
   const [customCurricula, setCustomCurricula] = useState({});
   const [newProgramName, setNewProgramName] = useState("");
   const [programsLoading, setProgramsLoading] = useState(false);
+  const [instructors, setInstructors] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState({});
   const [uploading, setUploading] = useState({});
   const [actionMessage, setActionMessage] = useState(null);
@@ -32,6 +33,7 @@ export default function AdminCurriculumPage() {
   const [previewProgramId, setPreviewProgramId] = useState(null);
   const [courses, setCourses] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
+  const [assignModal, setAssignModal] = useState({ open: false, course: null });
 
   // For uploaded doc preview modal
   const [previewText, setPreviewText] = useState("");
@@ -44,7 +46,8 @@ export default function AdminCurriculumPage() {
     try {
       const progRes = await fetch("/api/programs");
       const progData = await progRes.json();
-      setPrograms(progData.programs || []);
+      const nextPrograms = progData.programs || [];
+      setPrograms(nextPrograms);
 
       const currRes = await fetch("/api/curriculum");
       const currData = await currRes.json();
@@ -52,9 +55,18 @@ export default function AdminCurriculumPage() {
       currData.curricula?.forEach(c => { curriculaMap[c.program_id] = c; });
       setCustomCurricula(curriculaMap);
 
+      const firstUploadedProgram = nextPrograms.find(program => curriculaMap[program.id]);
+      if (!previewProgramId && firstUploadedProgram) {
+        setPreviewProgramId(firstUploadedProgram.id);
+      }
+
       const coursesRes = await fetch("/api/courses");
       const coursesData = await coursesRes.json();
       setCourses(coursesData.courses || []);
+
+      const usersRes = await fetch("/api/users?role=instructor");
+      const usersData = await usersRes.json();
+      setInstructors(usersData.users || []);
     } catch (error) {
       console.error("Failed to load curriculum workspace:", error);
     }
@@ -134,11 +146,24 @@ export default function AdminCurriculumPage() {
       const res = await fetch("/api/curriculum", { method: "POST", body: formData });
       if (res.ok) {
         const data = await res.json();
-        triggerMessage("success", `Successfully uploaded "${data.fileName}".`);
+        const parsed = Number(data.parsedCount || 0);
+
+        if (parsed > 0) {
+          triggerMessage("success", `Uploaded "${data.fileName}". Parsed ${parsed} courses.`);
+          setViewMode("grid");
+        } else {
+          triggerMessage("error", `Uploaded "${data.fileName}" but no courses were parsed. Check ai-debug.log.`);
+        }
+
         setSelectedFiles(prev => { const c = { ...prev }; delete c[programId]; return c; });
         if (fileRefs.current[programId]) fileRefs.current[programId].value = "";
         await fetchMetadata();
-      } else { const err = await res.json(); triggerMessage("error", err.error || "Upload failed."); }
+        // Only open the preview modal automatically when parsing produced courses
+        if (parsed > 0) setPreviewProgramId(programId);
+      } else {
+        const err = await res.json();
+        triggerMessage("error", err.error || "Upload failed.");
+      }
     } catch { triggerMessage("error", "Network connection failure."); }
     setUploading(prev => ({ ...prev, [programId]: false }));
   };
@@ -159,6 +184,26 @@ export default function AdminCurriculumPage() {
       if (res.ok) { triggerMessage("success", "Custom curriculum deleted. Reverted to default."); await fetchMetadata(); }
       else { triggerMessage("error", "Failed to delete custom sheet."); }
     } catch { triggerMessage("error", "Network connection failure."); }
+  };
+
+  const handleSaveInstructors = async (courseId, selectedInstructorIds) => {
+    try {
+      const res = await fetch("/api/course-instructors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ course_id: courseId, instructor_ids: selectedInstructorIds })
+      });
+      if (res.ok) {
+        triggerMessage("success", "Instructors assigned successfully.");
+        await fetchMetadata();
+        setAssignModal({ open: false, course: null });
+      } else {
+        const err = await res.json();
+        triggerMessage("error", err.error || "Failed to assign instructors");
+      }
+    } catch {
+      triggerMessage("error", "Network connection failure.");
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -399,6 +444,7 @@ export default function AdminCurriculumPage() {
                               <th className="px-4 py-3 text-center w-20">Units</th>
                               <th className="px-4 py-3 text-center w-28">Pre-Requisites</th>
                               <th className="px-4 py-3 text-center w-28">Co-Requisites</th>
+                              <th className="px-4 py-3 w-48 text-center">Instructors</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
@@ -409,12 +455,24 @@ export default function AdminCurriculumPage() {
                                 <td className="px-4 py-3 text-center font-bold text-gray-950">{course.units}</td>
                                 <td className="px-4 py-3 text-center text-[10px] text-gray-400 font-semibold italic">{course.prereq || "—"}</td>
                                 <td className="px-4 py-3 text-center text-[10px] text-gray-400 font-semibold italic">{course.coreq || "—"}</td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-col gap-1 items-center">
+                                    {course.instructors && course.instructors.length > 0 ? (
+                                      course.instructors.map((inst) => (
+                                        <span key={inst.id} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap overflow-hidden text-ellipsis max-w-[140px]" title={inst.full_name}>{inst.full_name}</span>
+                                      ))
+                                    ) : (
+                                      <span className="text-[10px] text-gray-400 italic">Unassigned</span>
+                                    )}
+                                    <button onClick={() => setAssignModal({ open: true, course })} className="text-[10px] text-[#800000] font-bold hover:underline mt-1">Assign</button>
+                                  </div>
+                                </td>
                               </tr>
                             ))}
                             <tr className="bg-gray-50/50 border-t border-gray-100 font-bold text-gray-900">
                               <td colSpan={2} className="px-4 py-3 text-right uppercase tracking-wider text-gray-500 text-[10px]">Semester Totals:</td>
                               <td className="px-4 py-3 text-center font-extrabold text-[#800000]">{totalUnits}</td>
-                              <td colSpan={2} className="px-4 py-3"></td>
+                              <td colSpan={3} className="px-4 py-3"></td>
                             </tr>
                           </tbody>
                         </table>
@@ -578,6 +636,58 @@ export default function AdminCurriculumPage() {
             )}
           </div>
         </div>
+        </div>
+      )}
+
+      {/* Assign Instructor Modal */}
+      {assignModal.open && assignModal.course && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h4 className="font-bold text-gray-900 text-sm">Assign Instructors</h4>
+              <button onClick={() => setAssignModal({ open: false, course: null })} className="text-gray-400 hover:text-gray-900"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{assignModal.course.code}</p>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{assignModal.course.title}</p>
+              </div>
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
+                {instructors.map((instructor) => {
+                  const isAssigned = assignModal.course.instructors?.some(inst => inst.id === instructor.id);
+                  return (
+                    <label key={instructor.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        defaultChecked={isAssigned}
+                        className="w-4 h-4 text-[#800000] border-gray-300 rounded focus:ring-[#800000]"
+                        id={`inst-${instructor.id}`}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-800">{instructor.full_name}</span>
+                        <span className="text-[10px] text-gray-500">{instructor.email}</span>
+                      </div>
+                    </label>
+                  );
+                })}
+                {instructors.length === 0 && (
+                  <p className="text-xs text-gray-500 italic text-center py-4">No instructors found.</p>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+              <button onClick={() => setAssignModal({ open: false, course: null })} className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
+              <button
+                onClick={() => {
+                  const selectedIds = Array.from(document.querySelectorAll('input[id^="inst-"]:checked')).map(el => el.id.replace('inst-', ''));
+                  handleSaveInstructors(assignModal.course.id, selectedIds);
+                }}
+                className="px-5 py-2 text-xs font-bold text-white bg-[#800000] hover:bg-red-900 rounded-xl shadow-sm transition-colors"
+              >
+                Save Assignments
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

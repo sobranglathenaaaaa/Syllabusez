@@ -17,7 +17,7 @@ export default function InstructorCurriculumPage() {
   const [loading, setLoading] = useState(true);
   const [customCurricula, setCustomCurricula] = useState({});
   const [courses, setCourses] = useState([]);
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("document");
   const [previewText, setPreviewText] = useState("");
   const [loadingText, setLoadingText] = useState(false);
   const selectedDepartmentObject = departments.find(d => d.id === selectedDept);
@@ -42,10 +42,12 @@ export default function InstructorCurriculumPage() {
       setCourses(coursesData.courses || []);
 
       const bsitDept = depts.find(d => d.name.includes("Information Technology"));
-      if (bsitDept) {
-        setSelectedDept(bsitDept.id);
-      } else if (depts.length > 0) {
-        setSelectedDept(depts[0].id);
+      const defaultDept = bsitDept ? bsitDept.id : depts[0]?.id;
+      if (defaultDept) {
+        setSelectedDept(defaultDept);
+        if (curriculaMap[defaultDept]) {
+          setViewMode("document");
+        }
       }
     } catch (error) {
       console.error("Failed to load curriculum:", error);
@@ -143,7 +145,62 @@ export default function InstructorCurriculumPage() {
         (() => {
           const sheet = customCurricula[selectedDept];
           const fileUrl = `/uploads/curricula/${selectedDept}_${sheet.file_name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+          const fileExt = sheet.file_name.split('.').pop().toLowerCase();
           const programCourses = courses.filter(c => c.program_id === selectedDept);
+
+          const renderOriginalDocumentSection = () => {
+            if (fileExt === "pdf") {
+              return (
+                <div className="bg-white border border-gray-100 shadow-sm rounded-3xl overflow-hidden">
+                  <div className="px-4 py-3 bg-[#800000]/5 border-b border-gray-100">
+                    <h5 className="font-extrabold text-xs uppercase tracking-wider text-gray-800">Original Curriculum Document</h5>
+                  </div>
+                  <div className="h-[48vh]">
+                    <object data={fileUrl} type="application/pdf" className="w-full h-full" aria-label="PDF Viewer">
+                      <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500 p-8">
+                        <p className="text-xs text-center">Your browser cannot display this PDF inline.</p>
+                        <a href={fileUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-[#800000] text-white text-xs font-bold rounded-xl">Open PDF in new tab</a>
+                      </div>
+                    </object>
+                  </div>
+                </div>
+              );
+            }
+
+            if (fileExt === "txt") {
+              return (
+                <div className="bg-white border border-gray-100 shadow-sm rounded-3xl overflow-hidden">
+                  <div className="px-4 py-3 bg-[#800000]/5 border-b border-gray-100">
+                    <h5 className="font-extrabold text-xs uppercase tracking-wider text-gray-800">Original Curriculum Document</h5>
+                  </div>
+                  <div className="p-6 bg-gray-50 text-xs text-gray-800 whitespace-pre-wrap overflow-y-auto max-h-[48vh] font-mono">
+                    {previewText}
+                  </div>
+                </div>
+              );
+            }
+
+            if (fileExt === "docx") {
+              return (
+                <div className="bg-white border border-gray-100 shadow-sm rounded-3xl overflow-hidden">
+                  <div className="px-4 py-3 bg-[#800000]/5 border-b border-gray-100">
+                    <h5 className="font-extrabold text-xs uppercase tracking-wider text-gray-800">Original Curriculum Document</h5>
+                  </div>
+                  <div className="p-6 bg-gray-50 overflow-y-auto max-h-[48vh] text-sm text-gray-800">
+                    {loadingText ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="w-8 h-8 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewText }} />
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          };
 
           // Grouping
           const grouped = {};
@@ -309,13 +366,15 @@ export default function InstructorCurriculumPage() {
                   })()}
                 </div>
               ) : (
-                programCourses.length === 0 ? (
-                  <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
-                    <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                    <span className="text-xs font-semibold">No parsed courses found. Reference curriculum might be empty.</span>
-                  </div>
-                ) : (
-                  <div className="space-y-10">
+                <div className="space-y-8">
+                  {renderOriginalDocumentSection()}
+                  {programCourses.length === 0 ? (
+                    <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
+                      <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                      <span className="text-xs font-semibold">No parsed courses found. Reference curriculum might be empty.</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-10">
                     {sortedYears.map(year => {
                       const yearSemesters = grouped[year];
                       const sortedSemesters = Object.keys(yearSemesters).sort((a, b) => {

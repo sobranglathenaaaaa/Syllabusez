@@ -503,7 +503,7 @@ export function SyllabusEditor({ syllabusId = null }) {
   // Submit/Save Handler
   const handleSave = async (statusType) => {
     if (!courseId) {
-      alert("Please select a Program and associated Course first.");
+      alert("Please select a Program and Corresponding Course first.");
       setActiveSection("A");
       return;
     }
@@ -700,13 +700,31 @@ export function SyllabusEditor({ syllabusId = null }) {
                 </select>
               </div>
 
-              {/* Associated Course Selector */}
+              {/* Course Selector */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Associated Course</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Corresponding Course</label>
                 <select
                   value={courseId}
                   disabled={!selectedDept}
-                  onChange={(e) => setCourseId(e.target.value)}
+                  onChange={(e) => {
+                    const newCourseId = e.target.value;
+                    setCourseId(newCourseId);
+
+                    // Auto-fill pre/co requisites from the database
+                    const selected = courses.find(c => c.id === newCourseId);
+                    if (selected) {
+                      if (selected.prereq && selected.prereq !== "None") {
+                        setPrerequisites(selected.prereq);
+                      } else {
+                        setPrerequisites("");
+                      }
+                      if (selected.coreq && selected.coreq !== "None") {
+                        setCorequisites(selected.coreq);
+                      } else {
+                        setCorequisites("");
+                      }
+                    }
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 focus:border-[#800000] focus:outline-none focus:ring-2 focus:ring-[#800000]/10 bg-white disabled:opacity-50"
                 >
                   <option value="">Select Course</option>

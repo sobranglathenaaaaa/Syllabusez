@@ -36,8 +36,11 @@ export function DashboardShell({ title, role, children }) {
 
           {role === 'instructor' && (
             <>
-              <Link href="#" className="block px-4 py-3 rounded-xl text-white/70 font-medium transition-all hover:bg-white/10 hover:text-white">
+              <Link href="/instructor/syllabi" className="block px-4 py-3 rounded-xl text-white/70 font-medium transition-all hover:bg-white/10 hover:text-white">
                 My Syllabi
+              </Link>
+              <Link href="/instructor/curriculum" className="block px-4 py-3 rounded-xl text-white/70 font-medium transition-all hover:bg-white/10 hover:text-white">
+                Curriculum Reference
               </Link>
               <Link href="#" className="block px-4 py-3 rounded-xl text-white/70 font-medium transition-all hover:bg-white/10 hover:text-white">
                 My Classes

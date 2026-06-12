@@ -3,21 +3,21 @@
 import { useState, useEffect } from "react";
 import {
   BookOpen,
-  Printer,
-  Download,
   FileText,
   Clock,
-  CheckCircle,
   HelpCircle,
-  AlertTriangle
+  AlertTriangle,
+  Info,
+  Download
 } from "lucide-react";
 
-export default function CurriculumPage() {
+export default function InstructorCurriculumPage() {
   const [departments, setDepartments] = useState([]);
   const [selectedDept, setSelectedDept] = useState("");
   const [loading, setLoading] = useState(true);
   const [customCurricula, setCustomCurricula] = useState({});
   const [courses, setCourses] = useState([]);
+  const [viewMode, setViewMode] = useState("grid");
   const [previewText, setPreviewText] = useState("");
   const [loadingText, setLoadingText] = useState(false);
   const selectedDepartmentObject = departments.find(d => d.id === selectedDept);
@@ -48,7 +48,7 @@ export default function CurriculumPage() {
         setSelectedDept(depts[0].id);
       }
     } catch (error) {
-      console.error("Failed to load student curriculum sheet:", error);
+      console.error("Failed to load curriculum:", error);
     }
     setLoading(false);
   };
@@ -75,7 +75,7 @@ export default function CurriculumPage() {
               const res = await fetch(`/api/curriculum/preview?fileName=${encodeURIComponent(safeFileName)}`);
               setPreviewText(await res.text());
             }
-          } catch (err) {
+          } catch {
             setPreviewText(`Failed to load ${ext} document contents.`);
           }
           setLoadingText(false);
@@ -84,10 +84,6 @@ export default function CurriculumPage() {
       }
     }
   }, [selectedDept, customCurricula]);
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   function formatDate(dateStr) {
     if (!dateStr) return "";
@@ -99,7 +95,7 @@ export default function CurriculumPage() {
     return (
       <div className="py-20 text-center flex flex-col items-center justify-center gap-3 bg-white rounded-3xl border border-gray-100 shadow-sm">
         <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-semibold text-gray-500">Initializing Curriculum workspace...</span>
+        <span className="text-xs font-semibold text-gray-500">Loading curriculum reference...</span>
       </div>
     );
   }
@@ -107,20 +103,25 @@ export default function CurriculumPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
 
-      {/* Dynamic Header & Switcher */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden">
+      {/* Header */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-red-50 text-[#800000] rounded-full">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Academic Curriculum Sheet</h3>
-            <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Official Program Directories</p>
+            <h3 className="text-lg font-bold text-gray-900">Curriculum Reference</h3>
+            <p className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">Read-only · Use as reference when creating syllabi</p>
           </div>
         </div>
 
-        {/* Dynamic Selector */}
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch sm:items-center">
+          {/* Read-only notice */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs font-semibold text-blue-700">
+            <Info className="w-4 h-4 flex-shrink-0" />
+            <span>Reference only — cannot be edited here</span>
+          </div>
+
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Program:</span>
             <select
@@ -211,7 +212,7 @@ export default function CurriculumPage() {
                   </span>
                   <h4 className="font-extrabold text-sm text-gray-900 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-[#800000]" />
-                    <span>Uploaded Curriculum Sheet: {sheet.file_name} (Dynamic Catalog)</span>
+                    <span>Uploaded Curriculum Sheet: {sheet.file_name} ({viewMode === "grid" ? "Dynamic Catalog" : "Original Document"})</span>
                   </h4>
                   <p className="text-[10px] font-semibold text-gray-400 flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
@@ -230,59 +231,136 @@ export default function CurriculumPage() {
                 </a>
               </div>
 
-              {programCourses.length === 0 ? (
-                <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
-                  <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                  <span className="text-xs font-semibold">No parsed courses found. Reference curriculum might be empty.</span>
+              {/* View Mode Toggle */}
+              <div className="flex border-b border-gray-100 gap-2">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`px-4 py-2 text-xs font-extrabold transition-all border-b-2 -mb-px ${viewMode === "grid" ? "border-[#800000] text-[#800000]" : "border-transparent text-gray-400 hover:text-gray-600"}`}
+                >
+                  Dynamic Catalog Grid
+                </button>
+                <button
+                  onClick={() => setViewMode("document")}
+                  className={`px-4 py-2 text-xs font-extrabold transition-all border-b-2 -mb-px ${viewMode === "document" ? "border-[#800000] text-[#800000]" : "border-transparent text-gray-400 hover:text-gray-600"}`}
+                >
+                  Original Document Viewer
+                </button>
+              </div>
+
+              {viewMode === "document" ? (
+                <div className="w-full h-[65vh] rounded-2xl overflow-hidden bg-gray-50">
+                  {(() => {
+                    const ext = sheet.file_name.split('.').pop().toLowerCase();
+                    if (ext === "pdf") {
+                      return (
+                        <object data={fileUrl} type="application/pdf" className="w-full h-full rounded-2xl border border-gray-200 bg-white" aria-label="PDF Viewer">
+                          <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400 p-8">
+                            <FileText className="w-10 h-10 text-gray-300" />
+                            <p className="text-xs font-semibold text-center">Your browser cannot display this PDF inline.</p>
+                            <a href={fileUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-[#800000] text-white text-xs font-bold rounded-xl">Open PDF in new tab</a>
+                          </div>
+                        </object>
+                      );
+                    } else if (ext === "txt") {
+                      return (
+                        <div className="w-full h-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 flex flex-col">
+                          {loadingText ? (
+                            <div className="flex-grow flex flex-col items-center justify-center gap-3">
+                              <div className="w-8 h-8 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
+                              <span className="text-xs text-gray-500 font-semibold">Loading text contents...</span>
+                            </div>
+                          ) : (
+                            <pre className="flex-grow p-6 bg-gray-50 rounded-xl border border-gray-100 text-xs font-mono whitespace-pre-wrap overflow-y-auto text-gray-800 text-left">
+                              {previewText}
+                            </pre>
+                          )}
+                        </div>
+                      );
+                    } else if (ext === "docx") {
+                      return (
+                        <div className="w-full h-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 flex flex-col">
+                          {loadingText ? (
+                            <div className="flex-grow flex flex-col items-center justify-center gap-3">
+                              <div className="w-8 h-8 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
+                              <span className="text-xs text-gray-500 font-semibold">Loading document...</span>
+                            </div>
+                          ) : (
+                            <div 
+                              className="flex-grow p-6 bg-gray-50 rounded-xl border border-gray-100 text-sm overflow-y-auto text-gray-800 text-left docx-viewer"
+                              dangerouslySetInnerHTML={{ __html: previewText }} 
+                            />
+                          )}
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="w-full h-full bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col items-center justify-center p-8 text-center space-y-4">
+                          <AlertTriangle className="w-12 h-12 text-amber-500" />
+                          <div className="space-y-1">
+                            <h4 className="font-bold text-gray-900">Preview Not Available</h4>
+                            <p className="text-xs text-gray-500 max-w-sm">Inline preview is not available for this file type (.{ext}). Please download the file to view its contents.</p>
+                          </div>
+                          <a href={fileUrl} download className="px-5 py-2.5 bg-[#800000] text-white text-xs font-bold rounded-xl flex items-center gap-2">
+                            <Download className="w-4 h-4" /> Download to View
+                          </a>
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
               ) : (
-                <div className="space-y-10">
-                  {sortedYears.map(year => {
-                    const yearSemesters = grouped[year];
-                    const sortedSemesters = Object.keys(yearSemesters).sort((a, b) => {
-                      return (semesterOrder[a] || 99) - (semesterOrder[b] || 99);
-                    });
+                programCourses.length === 0 ? (
+                  <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
+                    <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                    <span className="text-xs font-semibold">No parsed courses found. Reference curriculum might be empty.</span>
+                  </div>
+                ) : (
+                  <div className="space-y-10">
+                    {sortedYears.map(year => {
+                      const yearSemesters = grouped[year];
+                      const sortedSemesters = Object.keys(yearSemesters).sort((a, b) => {
+                        return (semesterOrder[a] || 99) - (semesterOrder[b] || 99);
+                      });
 
-                    return (
-                      <div key={year} className="space-y-4">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-[#800000] bg-red-50/50 border-l-4 border-[#800000] pl-3 py-1.5 rounded-r-lg">
-                          {year}
-                        </h4>
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                          {sortedSemesters.map(sem => (
-                            <div key={sem}>
-                              {renderSemesterTable(`${year} – ${sem}`, yearSemesters[sem])}
-                            </div>
-                          ))}
+                      return (
+                        <div key={year} className="space-y-4">
+                          <h4 className="text-xs font-black uppercase tracking-widest text-[#800000] bg-red-50/50 border-l-4 border-[#800000] pl-3 py-1.5 rounded-r-lg">
+                            {year}
+                          </h4>
+                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            {sortedSemesters.map(sem => (
+                              <div key={sem}>
+                                {renderSemesterTable(`${year} – ${sem}`, yearSemesters[sem])}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )
               )}
             </div>
           );
         })()
       ) : (
 
-        // --- No custom upload ---
+        // Placeholder for programs with no custom upload
         <div className="bg-white rounded-3xl border border-gray-200 shadow-md p-8 text-center space-y-6 max-w-xl mx-auto py-12">
           <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-100 shadow-inner">
             <AlertTriangle className="w-8 h-8" />
           </div>
-
           <div className="space-y-2">
             <h4 className="text-lg font-black text-gray-900 leading-tight">Curriculum Pending Upload</h4>
             <p className="text-xs text-gray-500 font-medium leading-relaxed">
-              No official customized curriculum document has been uploaded by the administration for this program yet:
+              No curriculum document has been uploaded by the administration for this program yet:
             </p>
             <span className="inline-block mt-2 px-3 py-1.5 bg-amber-50 text-amber-800 font-black text-xs rounded-xl border border-amber-100">
               {selectedDepartmentObject?.name}
             </span>
           </div>
-
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-semibold text-gray-400 leading-relaxed max-w-sm mx-auto">
-            Please contact your Department Chairperson or academic head to upload the official revised curriculum document.
+            Please contact your Department Chairperson or academic head regarding the curriculum upload.
           </div>
         </div>
       )}

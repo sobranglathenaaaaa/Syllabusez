@@ -1,78 +1,183 @@
-// FeatureAccordion.jsx – vertical accordion for settings module
-// Matches existing glassmorphism, maroon accents, and typography.
+"use client";
 
 import React, { useState } from 'react';
+import { 
+  ChevronDown, 
+  Sparkles, 
+  FileText, 
+  ShieldCheck, 
+  Users, 
+  Zap, 
+  Layout, 
+  Database 
+} from 'lucide-react';
 
-// Sample feature data – can be extended or sourced dynamically
 const FEATURES = [
   {
-    title: 'Student Timetable',
-    description: 'View your weekly schedule with course details, professor contacts, and room locations. The timetable updates in real time and supports export to calendar apps.',
-    // Image generated to match UI aesthetic
-    img: 'C:/Users/julie/.gemini/antigravity-ide/brain/23989c00-92fd-49c2-9caf-ef0d7de234a3/feature_timetable_mockup_1780717831908.png',
+    id: 'syllabus-builder',
+    title: 'Outcomes-Based Syllabus Builder',
+    description: 'Design comprehensive syllabi with automated mapping between Institutional Learning Outcomes (ILO), Program Learning Outcomes (PLO), and Course Learning Outcomes (CLO). Our dynamic builder ensures academic alignment with polytechnic standards.',
+    icon: Layout,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+    visual: (
+      <div className="mt-4 p-4 bg-gray-50 border border-gray-100 rounded-2xl">
+        <div className="flex gap-2 mb-3">
+          <div className="w-8 h-3 bg-amber-200 rounded-full" />
+          <div className="w-12 h-3 bg-gray-200 rounded-full" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-2 w-full bg-white border border-gray-100 rounded shadow-sm" />
+          <div className="h-2 w-3/4 bg-white border border-gray-100 rounded shadow-sm" />
+          <div className="h-2 w-1/2 bg-white border border-gray-100 rounded shadow-sm" />
+        </div>
+        <div className="mt-4 flex justify-between items-center">
+          <div className="flex gap-1">
+            <div className="w-4 h-4 bg-amber-500 rounded-sm" />
+            <div className="w-4 h-4 bg-amber-300 rounded-sm" />
+          </div>
+          <div className="text-[10px] font-bold text-amber-700 uppercase">Alignment: 100%</div>
+        </div>
+      </div>
+    )
   },
   {
-    title: 'Course Catalog',
-    description: 'Browse all available courses, filter by department, credits, or semester, and view syllabus PDFs directly from the portal.',
-    img: null,
+    id: 'ocr-scanner',
+    title: 'Intelligent OCR Integration',
+    description: 'Digitize your legacy syllabi in seconds. Using advanced Tesseract-powered character recognition, the portal extracts weekly plans and grading parameters directly from printed documents or screenshots.',
+    icon: Sparkles,
+    color: 'text-[#800000]',
+    bgColor: 'bg-red-50',
+    visual: (
+      <div className="mt-4 p-4 bg-gray-50 border border-gray-100 rounded-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#800000]/5 to-transparent" />
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-white rounded-xl border border-gray-100 flex items-center justify-center shadow-sm">
+            <Zap className="w-5 h-5 text-[#800000]" />
+          </div>
+          <div>
+            <div className="h-2 w-20 bg-gray-300 rounded-full mb-1" />
+            <div className="h-2 w-12 bg-gray-200 rounded-full" />
+          </div>
+        </div>
+        <div className="space-y-1.5 opacity-60">
+          <div className="h-1.5 w-full bg-white rounded" />
+          <div className="h-1.5 w-full bg-white rounded" />
+          <div className="h-1.5 w-2/3 bg-white rounded" />
+        </div>
+      </div>
+    )
   },
   {
-    title: 'Notifications Center',
-    description: 'Stay up‑to‑date with announcements, upcoming deadlines, and system messages. Mark as read or clear all with one click.',
-    img: null,
+    id: 'secure-materials',
+    title: 'Encrypted Material Hosting',
+    description: 'Securely upload and manage course materials. Our system uses signed URL technology to ensure that resources are only accessible to authorized students and faculty within specific time windows.',
+    icon: ShieldCheck,
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    visual: (
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="p-3 bg-white border border-gray-100 rounded-xl flex items-center gap-2 shadow-sm">
+            <FileText className="w-3.5 h-3.5 text-indigo-500" />
+            <div className="h-1.5 w-12 bg-gray-100 rounded-full" />
+          </div>
+        ))}
+      </div>
+    )
   },
   {
-    title: 'Profile Settings',
-    description: 'Edit personal information, change password, and customize theme preferences. Changes are saved instantly.',
-    img: null,
-  },
+    id: 'approval-workflow',
+    title: 'Dynamic Approval Pipeline',
+    description: 'Streamline the syllabus review process. Admins and Department Heads can comment, request revisions, and approve syllabi through a centralized dashboard with version history tracking.',
+    icon: Users,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    visual: (
+      <div className="mt-4 p-4 bg-gray-50 border border-gray-100 rounded-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex -space-x-2">
+            <div className="w-6 h-6 rounded-full bg-gray-200 border-2 border-white" />
+            <div className="w-6 h-6 rounded-full bg-[#800000]/20 border-2 border-white" />
+            <div className="w-6 h-6 rounded-full bg-amber-200 border-2 border-white" />
+          </div>
+          <div className="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-black rounded-full">APPROVED</div>
+        </div>
+        <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-full bg-green-500 w-full" />
+        </div>
+      </div>
+    )
+  }
 ];
 
 export default function FeatureAccordion() {
-  const [openIndex, setOpenIndex] = useState(null);
-
-  const toggle = (i) => {
-    setOpenIndex(openIndex === i ? null : i);
-  };
+  const [openId, setOpenId] = useState('syllabus-builder');
 
   return (
-    <div className="mt-8 space-y-4">
-      {FEATURES.map((feat, i) => (
-        <div
-          key={i}
-          className="border border-gray-200 rounded-xl glassmorphism overflow-hidden transition-all duration-300"
-        >
-          {/* Title Row */}
-          <button
-            onClick={() => toggle(i)}
-            className="w-full flex justify-between items-center px-5 py-3 text-left bg-[#800000] bg-opacity-10 hover:bg-opacity-20 transition-colors"
-          >
-            <span className="text-lg font-semibold text-gray-800">{feat.title}</span>
-            <svg
-              className={`w-5 h-5 transform transition-transform ${openIndex === i ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+    <div className="w-full space-y-3">
+      <div className="pb-2">
+        <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">Portal Features</h3>
+        <p className="text-xs text-gray-500 mt-1 font-medium">Explore the core capabilities of Syllabusez.</p>
+      </div>
+
+      <div className="space-y-2">
+        {FEATURES.map((feature) => {
+          const isOpen = openId === feature.id;
+          const Icon = feature.icon;
+
+          return (
+            <div 
+              key={feature.id}
+              className={`group overflow-hidden transition-all duration-300 border ${
+                isOpen 
+                  ? 'bg-white border-gray-200 rounded-2xl shadow-sm' 
+                  : 'bg-gray-50/50 border-gray-100 rounded-xl hover:bg-white hover:border-gray-200'
+              }`}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {/* Expandable Content */}
-          {openIndex === i && (
-            <div className="p-5 bg-white/80 backdrop-filter backdrop-blur-sm">
-              <p className="mb-3 text-gray-700">{feat.description}</p>
-              {feat.img && (
-                <img
-                  src={feat.img}
-                  alt={feat.title}
-                  className="w-full h-auto rounded-md shadow-md"
-                />
-              )}
+              <button
+                onClick={() => setOpenId(isOpen ? null : feature.id)}
+                className="w-full flex items-center justify-between p-4 text-left transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl ${feature.bgColor} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                    <Icon className={`w-5 h-5 ${feature.color}`} />
+                  </div>
+                  <div>
+                    <h4 className={`text-sm font-extrabold transition-colors ${
+                      isOpen ? 'text-gray-900' : 'text-gray-600'
+                    }`}>
+                      {feature.title}
+                    </h4>
+                    {!isOpen && (
+                      <p className="text-[10px] text-gray-400 font-medium line-clamp-1 mt-0.5">
+                        {feature.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${
+                  isOpen ? 'rotate-180 text-[#800000]' : ''
+                }`} />
+              </button>
+
+              <div 
+                className={`transition-all duration-500 ease-in-out ${
+                  isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                }`}
+              >
+                <div className="px-4 pb-5 pt-1 ml-14">
+                  <p className="text-xs text-gray-600 leading-relaxed font-medium max-w-lg">
+                    {feature.description}
+                  </p>
+                  
+                  {feature.visual}
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }

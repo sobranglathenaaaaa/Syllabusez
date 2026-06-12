@@ -66,6 +66,10 @@ function getNotifications() {
     navItems.push({ label: "Curriculum", href: "/student/curriculum", icon: BookOpen });
   }
 
+  if (role === "instructor") {
+    navItems.push({ label: "Curriculum Reference", href: "/instructor/curriculum", icon: BookOpen });
+  }
+
   if (role === "admin") {
     navItems.push(
       { label: "User Management", href: "/admin/users", icon: Users },

@@ -27,7 +27,7 @@ async function saveSettingsFile(data) {
 }
 
 export async function GET() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const userId = cookieStore.get('session_user_id')?.value;
 
   if (!userId) {
@@ -46,7 +46,7 @@ export async function GET() {
 }
 
 export async function PUT(request) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const userId = cookieStore.get('session_user_id')?.value;
 
   if (!userId) {

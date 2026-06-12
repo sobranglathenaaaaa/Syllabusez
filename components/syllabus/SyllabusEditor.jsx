@@ -208,6 +208,36 @@ export function SyllabusEditor({ syllabusId = null }) {
   // Selected course model helper
   const selectedCourseModel = courses.find(c => c.id === courseId);
 
+  const renderRequirementValue = (value) => {
+    const normalized = String(value || "").trim();
+
+    if (!normalized || /^none$/i.test(normalized)) {
+      return <span className="italic text-gray-400">None</span>;
+    }
+
+    const parts = normalized
+      .split(/\s*(?:,|;|\||\/| and )\s*/i)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (!parts.length) {
+      return <span className="italic text-gray-400">None</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-1.5 mt-0.5">
+        {parts.map((part, index) => (
+          <span
+            key={`${part}-${index}`}
+            className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-700 border border-gray-200"
+          >
+            {part}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   // Section Progress calculator
   const getSectionProgress = (sec) => {
     switch (sec) {
@@ -739,7 +769,7 @@ export function SyllabusEditor({ syllabusId = null }) {
 
             {/* Read-only derived values from course details */}
             {selectedCourseModel && (
-              <div className="grid grid-cols-3 gap-4 bg-gray-50/50 border border-gray-100 p-4 rounded-2xl text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 bg-gray-50/50 border border-gray-100 p-4 rounded-2xl text-xs">
                 <div>
                   <span className="font-bold text-gray-400 block uppercase tracking-wider">Course Code</span>
                   <span className="font-extrabold text-[#800000] mt-0.5 block">{selectedCourseModel.code}</span>
@@ -751,6 +781,14 @@ export function SyllabusEditor({ syllabusId = null }) {
                 <div>
                   <span className="font-bold text-gray-400 block uppercase tracking-wider">Course Credits</span>
                   <span className="font-bold text-gray-800 mt-0.5 block">{selectedCourseModel.units} Units</span>
+                </div>
+                <div>
+                  <span className="font-bold text-gray-400 block uppercase tracking-wider">Pre-requisites</span>
+                  {renderRequirementValue(selectedCourseModel.prereq)}
+                </div>
+                <div>
+                  <span className="font-bold text-gray-400 block uppercase tracking-wider">Co-requisites</span>
+                  {renderRequirementValue(selectedCourseModel.coreq)}
                 </div>
               </div>
             )}

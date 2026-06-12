@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userId = cookieStore.get("session_user")?.value || cookieStore.get("session_user_id")?.value;
     if (!userId) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
 

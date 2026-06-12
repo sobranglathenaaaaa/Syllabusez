@@ -7,7 +7,7 @@ export async function GET(request) {
     const url = new URL(request.url);
     const programId = url.searchParams.get("program_id");
     // Server-side role enforcement: if requester is a student, force their program_id
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userId = cookieStore.get("session_user")?.value || cookieStore.get("session_user_id")?.value;
     let effectiveProgramId = programId;
     if (userId) {

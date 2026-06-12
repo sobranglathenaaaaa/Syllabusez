@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import DynamicCurriculumView from "@/components/curriculum/DynamicCurriculumView";
 import {
   BookOpen,
   Upload,
-  Download,
   Trash2,
   CheckCircle2,
   AlertCircle,
@@ -14,8 +14,7 @@ import {
   HelpCircle,
   Eye,
   X,
-  AlertTriangle,
-  Printer
+  AlertTriangle
 } from "lucide-react";
 
 export default function AdminCurriculumPage() {
@@ -32,24 +31,19 @@ export default function AdminCurriculumPage() {
   // Which program's catalog to preview below the grid
   const [previewProgramId, setPreviewProgramId] = useState(null);
   const [courses, setCourses] = useState([]);
-  const [viewMode, setViewMode] = useState("grid");
   const [assignModal, setAssignModal] = useState({ open: false, course: null });
-
-  // For uploaded doc preview modal
-  const [previewText, setPreviewText] = useState("");
-  const [loadingText, setLoadingText] = useState(false);
 
   const fileRefs = useRef({});
 
   // ─── Data fetching ────────────────────────────────────────────────────────
   const fetchMetadata = async () => {
     try {
-      const progRes = await fetch("/api/programs");
+      const progRes = await fetch("/api/programs", { cache: "no-store" });
       const progData = await progRes.json();
       const nextPrograms = progData.programs || [];
       setPrograms(nextPrograms);
 
-      const currRes = await fetch("/api/curriculum");
+      const currRes = await fetch("/api/curriculum", { cache: "no-store" });
       const currData = await currRes.json();
       const curriculaMap = {};
       currData.curricula?.forEach(c => { curriculaMap[c.program_id] = c; });
@@ -60,11 +54,11 @@ export default function AdminCurriculumPage() {
         setPreviewProgramId(firstUploadedProgram.id);
       }
 
-      const coursesRes = await fetch("/api/courses");
+      const coursesRes = await fetch("/api/courses", { cache: "no-store" });
       const coursesData = await coursesRes.json();
       setCourses(coursesData.courses || []);
 
-      const usersRes = await fetch("/api/users?role=instructor");
+      const usersRes = await fetch("/api/users?role=instructor", { cache: "no-store" });
       const usersData = await usersRes.json();
       setInstructors(usersData.users || []);
     } catch (error) {
@@ -74,35 +68,6 @@ export default function AdminCurriculumPage() {
   };
 
   useEffect(() => { fetchMetadata(); }, []);
-
-  // Fetch txt/docx content when preview is opened
-  useEffect(() => {
-    const activeSheet = customCurricula[previewProgramId];
-    if (activeSheet) {
-      const ext = activeSheet.file_name.split('.').pop().toLowerCase();
-      if (ext === "txt" || ext === "docx") {
-        const fetchContent = async () => {
-          setLoadingText(true);
-          setPreviewText("");
-          try {
-            const safeFileName = `${previewProgramId}_${activeSheet.file_name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
-            if (ext === "txt") {
-              const fileUrl = `/uploads/curricula/${safeFileName}`;
-              const res = await fetch(fileUrl);
-              setPreviewText(await res.text());
-            } else if (ext === "docx") {
-              const res = await fetch(`/api/curriculum/preview?fileName=${encodeURIComponent(safeFileName)}`);
-              setPreviewText(await res.text());
-            }
-          } catch {
-            setPreviewText(`Failed to load ${ext} document contents.`);
-          }
-          setLoadingText(false);
-        };
-        fetchContent();
-      }
-    }
-  }, [previewProgramId, customCurricula]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   const triggerMessage = (type, text) => {
@@ -149,10 +114,9 @@ export default function AdminCurriculumPage() {
         const parsed = Number(data.parsedCount || 0);
 
         if (parsed > 0) {
-          triggerMessage("success", `Uploaded "${data.fileName}". Parsed ${parsed} courses.`);
-          setViewMode("grid");
+          triggerMessage("success", `Uploaded "${data.fileName}". Structured ${parsed} courses into the dynamic curriculum.`);
         } else {
-          triggerMessage("error", `Uploaded "${data.fileName}" but no courses were parsed. Check ai-debug.log.`);
+          triggerMessage("error", `Uploaded "${data.fileName}" but no courses could be structured. Try a clearer curriculum sheet format.`);
         }
 
         setSelectedFiles(prev => { const c = { ...prev }; delete c[programId]; return c; });
@@ -211,9 +175,6 @@ export default function AdminCurriculumPage() {
     return new Date(dateStr).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
-  const getCustomUrl = (programId, fileName) =>
-    `/uploads/curricula/${programId}_${fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
-
   // Derive which program is being previewed (for catalog display)
   const previewProgram = previewProgramId ? programs.find(p => p.id === previewProgramId) : null;
 
@@ -247,7 +208,7 @@ export default function AdminCurriculumPage() {
         </div>
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl">
           <HelpCircle className="w-4 h-4 text-[#800000]" />
-          <span>Upload TXT, PDF, or Word files to manage curriculum catalogs.</span>
+          <span>Upload a curriculum sheet to build the structured dynamic catalog for each program.</span>
         </div>
       </div>
 
@@ -388,7 +349,7 @@ export default function AdminCurriculumPage() {
               <div className="p-2 bg-red-50 text-[#800000] rounded-xl"><BookOpen className="w-5 h-5" /></div>
               <div>
                 <span className="text-[10px] font-bold text-[#800000] uppercase tracking-widest block">{previewProgram.name}</span>
-                <h4 className="font-extrabold text-sm text-gray-900">Curriculum Sheet Preview</h4>
+                <h4 className="font-extrabold text-sm text-gray-900">Dynamic Curriculum</h4>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -404,216 +365,30 @@ export default function AdminCurriculumPage() {
           {/* Content */}
           <div className="p-6 lg:p-10 space-y-8 overflow-y-auto flex-1">
             {customCurricula[previewProgram.id] ? (
-              /* ── Uploaded file view ── */
               (() => {
                 const sheet = customCurricula[previewProgram.id];
-                const fileUrl = getCustomUrl(previewProgram.id, sheet.file_name);
                 const programCourses = courses.filter(c => c.program_id === previewProgram.id);
-                
-                // Grouping
-                const grouped = {};
-                programCourses.forEach(course => {
-                  const y = course.year_level || "UNASSIGNED";
-                  const s = course.semester || "Unassigned Semester";
-                  if (!grouped[y]) grouped[y] = {};
-                  if (!grouped[y][s]) grouped[y][s] = [];
-                  grouped[y][s].push(course);
-                });
-
-                const yearOrder = { "FIRST YEAR": 1, "SECOND YEAR": 2, "THIRD YEAR": 3, "FOURTH YEAR": 4 };
-                const semesterOrder = { "1st Semester": 1, "2nd Semester": 2, "Summer Term": 3 };
-
-                const sortedYears = Object.keys(grouped).sort((a, b) => {
-                  return (yearOrder[a] || 99) - (yearOrder[b] || 99);
-                });
-
-                const renderSemesterTable = (semesterName, coursesList) => {
-                  const totalUnits = coursesList.reduce((sum, c) => sum + (c.units || 0), 0);
-
-                  return (
-                    <div className="bg-white border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full rounded-2xl">
-                      <div className="bg-[#800000]/5 border-b border-gray-100 px-4 py-3">
-                        <h5 className="font-extrabold text-xs text-gray-800 uppercase tracking-wider">{semesterName}</h5>
-                      </div>
-                      <div className="overflow-x-auto flex-1">
-                        <table className="w-full text-xs text-left border-collapse">
-                          <thead>
-                            <tr className="bg-gray-50/50 border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase">
-                              <th className="px-4 py-3 w-24">Course Code</th>
-                              <th className="px-4 py-3">Course Title</th>
-                              <th className="px-4 py-3 text-center w-20">Units</th>
-                              <th className="px-4 py-3 text-center w-28">Pre-Requisites</th>
-                              <th className="px-4 py-3 text-center w-28">Co-Requisites</th>
-                              <th className="px-4 py-3 w-48 text-center">Instructors</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {coursesList.map((course, idx) => (
-                              <tr key={course.id || idx} className="hover:bg-gray-50/30 transition-colors">
-                                <td className="px-4 py-3 font-bold text-gray-900">{course.code}</td>
-                                <td className="px-4 py-3 text-gray-700 leading-tight">{course.title}</td>
-                                <td className="px-4 py-3 text-center font-bold text-gray-950">{course.units}</td>
-                                <td className="px-4 py-3 text-center text-[10px] text-gray-400 font-semibold italic">{course.prereq || "—"}</td>
-                                <td className="px-4 py-3 text-center text-[10px] text-gray-400 font-semibold italic">{course.coreq || "—"}</td>
-                                <td className="px-4 py-3">
-                                  <div className="flex flex-col gap-1 items-center">
-                                    {course.instructors && course.instructors.length > 0 ? (
-                                      course.instructors.map((inst) => (
-                                        <span key={inst.id} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap overflow-hidden text-ellipsis max-w-[140px]" title={inst.full_name}>{inst.full_name}</span>
-                                      ))
-                                    ) : (
-                                      <span className="text-[10px] text-gray-400 italic">Unassigned</span>
-                                    )}
-                                    <button onClick={() => setAssignModal({ open: true, course })} className="text-[10px] text-[#800000] font-bold hover:underline mt-1">Assign</button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                            <tr className="bg-gray-50/50 border-t border-gray-100 font-bold text-gray-900">
-                              <td colSpan={2} className="px-4 py-3 text-right uppercase tracking-wider text-gray-500 text-[10px]">Semester Totals:</td>
-                              <td className="px-4 py-3 text-center font-extrabold text-[#800000]">{totalUnits}</td>
-                              <td colSpan={3} className="px-4 py-3"></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  );
-                };
 
                 return (
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                      <div>
-                        <h5 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-[#800000]" />
-                          {sheet.file_name} ({viewMode === "grid" ? "Dynamic Catalog" : "Original Document"})
-                        </h5>
-                        <p className="text-[10px] text-gray-400 font-semibold flex items-center gap-1 mt-1">
-                          <Clock className="w-3 h-3" /> Uploaded {formatDate(sheet.uploaded_at)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <a
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
-                        >
-                          <Download className="w-4 h-4" /> Download Original File
-                        </a>
-                      </div>
+                    <div className="pb-4 border-b border-gray-100">
+                      <h5 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#800000]" />
+                        Structured curriculum from {sheet.file_name}
+                      </h5>
+                      <p className="text-[10px] text-gray-400 font-semibold flex items-center gap-1 mt-1">
+                        <Clock className="w-3 h-3" /> Uploaded {formatDate(sheet.uploaded_at)}
+                      </p>
+                      <p className="text-[11px] text-gray-500 mt-2">
+                        This structured view is what instructors and students see. The original upload is kept on the server for processing only.
+                      </p>
                     </div>
 
-                    {/* View Mode Toggle */}
-                    <div className="flex border-b border-gray-100 gap-2">
-                      <button
-                        onClick={() => setViewMode("grid")}
-                        className={`px-4 py-2 text-xs font-extrabold transition-all border-b-2 -mb-px ${viewMode === "grid" ? "border-[#800000] text-[#800000]" : "border-transparent text-gray-400 hover:text-gray-600"}`}
-                      >
-                        Dynamic Catalog Grid
-                      </button>
-                      <button
-                        onClick={() => setViewMode("document")}
-                        className={`px-4 py-2 text-xs font-extrabold transition-all border-b-2 -mb-px ${viewMode === "document" ? "border-[#800000] text-[#800000]" : "border-transparent text-gray-400 hover:text-gray-600"}`}
-                      >
-                        Original Document Viewer
-                      </button>
-                    </div>
-
-                    {viewMode === "document" ? (
-                      <div className="w-full h-[65vh] rounded-2xl overflow-hidden bg-gray-50">
-                        {(() => {
-                          const ext = sheet.file_name.split('.').pop().toLowerCase();
-                          if (ext === "pdf") {
-                            return (
-                              <object data={fileUrl} type="application/pdf" className="w-full h-full rounded-2xl border border-gray-200 bg-white" aria-label="PDF Viewer">
-                                <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400 p-8">
-                                  <FileText className="w-10 h-10 text-gray-300" />
-                                  <p className="text-xs font-semibold">Your browser cannot display this PDF inline.</p>
-                                  <a href={fileUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-[#800000] text-white text-xs font-bold rounded-xl">Open PDF in new tab</a>
-                                </div>
-                              </object>
-                            );
-                          } else if (ext === "txt") {
-                            return (
-                              <div className="w-full h-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 flex flex-col">
-                                {loadingText ? (
-                                  <div className="flex-grow flex flex-col items-center justify-center gap-3">
-                                    <div className="w-8 h-8 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-xs text-gray-500 font-semibold">Loading text contents...</span>
-                                  </div>
-                                ) : (
-                                  <pre className="flex-grow p-6 bg-gray-50 rounded-xl border border-gray-100 text-xs font-mono whitespace-pre-wrap overflow-y-auto text-gray-800 text-left">
-                                    {previewText}
-                                  </pre>
-                                )}
-                              </div>
-                            );
-                          } else if (ext === "docx") {
-                            return (
-                              <div className="w-full h-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 flex flex-col">
-                                {loadingText ? (
-                                  <div className="flex-grow flex flex-col items-center justify-center gap-3">
-                                    <div className="w-8 h-8 border-4 border-[#800000] border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-xs text-gray-500 font-semibold">Loading document...</span>
-                                  </div>
-                                ) : (
-                                  <div 
-                                    className="flex-grow p-6 bg-gray-50 rounded-xl border border-gray-100 text-sm overflow-y-auto text-gray-800 text-left docx-viewer"
-                                    dangerouslySetInnerHTML={{ __html: previewText }} 
-                                  />
-                                )}
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <div className="w-full h-full bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col items-center justify-center p-8 text-center space-y-4">
-                                <AlertTriangle className="w-12 h-12 text-amber-500" />
-                                <div className="space-y-1">
-                                  <h4 className="font-bold text-gray-900">Preview Not Available</h4>
-                                  <p className="text-xs text-gray-500 max-w-sm">Inline preview is not available for this file type (.{ext}). Please download the file to view its contents.</p>
-                                </div>
-                                <a href={fileUrl} download className="px-5 py-2.5 bg-[#800000] text-white text-xs font-bold rounded-xl flex items-center gap-2">
-                                  <Download className="w-4 h-4" /> Download to View
-                                </a>
-                              </div>
-                            );
-                          }
-                        })()}
-                      </div>
-                    ) : (
-                      programCourses.length === 0 ? (
-                        <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
-                          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                          <span className="text-xs font-semibold">No parsed courses found. Try uploading a valid curriculum.</span>
-                        </div>
-                      ) : (
-                        <div className="space-y-10">
-                          {sortedYears.map(year => {
-                            const yearSemesters = grouped[year];
-                            const sortedSemesters = Object.keys(yearSemesters).sort((a, b) => {
-                              return (semesterOrder[a] || 99) - (semesterOrder[b] || 99);
-                            });
-
-                            return (
-                              <div key={year} className="space-y-4">
-                                <h4 className="text-xs font-black uppercase tracking-widest text-[#800000] bg-red-50/50 border-l-4 border-[#800000] pl-3 py-1.5 rounded-r-lg">
-                                  {year}
-                                </h4>
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                                  {sortedSemesters.map(sem => (
-                                    <div key={sem}>
-                                      {renderSemesterTable(`${year} – ${sem}`, yearSemesters[sem])}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )
-                    )}
+                    <DynamicCurriculumView
+                      courses={programCourses}
+                      onAssignInstructor={(course) => setAssignModal({ open: true, course })}
+                      emptyMessage="No structured courses yet. Upload a curriculum sheet to generate the dynamic layout."
+                    />
                   </div>
                 );
               })()

@@ -23,5 +23,3 @@ Set environment variables:
 
 - `DATABASE_URL` (MariaDB connection string, optional for local mock mode)
 - `SIGNED_URL_SECRET` (secret used for signed material URLs)
-- `GEMINI_API_KEY` (optional, for Gemini extraction of uploaded curriculum documents)
-- `OPENAI_API_KEY` (optional fallback if Gemini is not configured)

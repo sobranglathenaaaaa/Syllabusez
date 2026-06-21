@@ -25,6 +25,7 @@ import {
   Info
 } from "lucide-react";
 import Tesseract from "tesseract.js";
+import CourseAutosuggest from "@/components/common/CourseAutosuggest";
 
 // PUP Academic Defaults
 const DEFAULT_PUP_VISION = "PUP: The National Polytechnic University (PUP: Pambansang Politeknikong Unibersidad)";
@@ -733,9 +734,10 @@ export function SyllabusEditor({ syllabusId = null }) {
               {/* Course Selector */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Corresponding Course</label>
-                <select
+                <CourseAutosuggest
                   value={courseId}
                   disabled={!selectedDept}
+                  courses={filteredCoursesDropdown}
                   onChange={(e) => {
                     const newCourseId = e.target.value;
                     setCourseId(newCourseId);
@@ -755,15 +757,7 @@ export function SyllabusEditor({ syllabusId = null }) {
                       }
                     }
                   }}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 focus:border-[#800000] focus:outline-none focus:ring-2 focus:ring-[#800000]/10 bg-white disabled:opacity-50"
-                >
-                  <option value="">Select Course</option>
-                  {filteredCoursesDropdown.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} - {c.title}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 

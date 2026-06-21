@@ -31,13 +31,14 @@ export async function POST(request) {
     const buffer = fs.readFileSync(filePath);
     let extractedText = "";
 
-    if (fileName.endsWith(".docx")) {
+    const lowerName = fileName.toLowerCase();
+    if (lowerName.endsWith(".docx") || lowerName.endsWith(".doc")) {
       const mammoth = await import("mammoth");
-      const result = await mammoth.default.extractRawText({ path: filePath });
+      const result = await mammoth.default.convertToHtml({ path: filePath });
       extractedText = result.value || "";
-    } else if (fileName.endsWith(".txt")) {
+    } else if (lowerName.endsWith(".txt")) {
       extractedText = buffer.toString("utf-8");
-    } else if (fileName.endsWith(".pdf")) {
+    } else if (lowerName.endsWith(".pdf")) {
       const pdfParseModule = await import("pdf-parse-new");
       const parse = pdfParseModule.default || pdfParseModule;
       const pdf = await parse(buffer);

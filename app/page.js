@@ -8,89 +8,58 @@ import pupsj from "@/lib/image/pupsj.png";
 
 export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleQuickLogin = async (role) => {
     try {
-      // Trigger seed to ensure default profiles exist
-      await fetch("/api/seed", { method: "POST" });
+      const res = await fetch("/api/auth/quick-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
 
-      const roleProfiles = {
-        admin: { id: "a1a1a1a1-1111-4111-a111-111111111111", email: "admin@pup.edu.ph", name: "Admin Dela Cruz" },
-        instructor: { id: "i2i2i2i2-2222-4222-i222-222222222222", email: "instructor@pup.edu.ph", name: "Staff Dela Cruz" },
-        student: { id: "s3s3s3s3-3333-4333-s333-333333333333", email: "student@pup.edu.ph", name: "Juan Dela Cruz" }
-      };
+      const data = await res.json();
 
-      const user = roleProfiles[role];
-      if (user) {
-        document.cookie = `session_role=${role}; path=/; max-age=3600`;
-        document.cookie = `session_user_id=${user.id}; path=/; max-age=3600`;
-        document.cookie = `session_email=${user.email}; path=/; max-age=3600`;
-        document.cookie = `session_name=${encodeURIComponent(user.name)}; path=/; max-age=3600`;
+      if (!res.ok) {
+        console.error("Quick login failed:", data.error);
+        return;
       }
 
-      window.location.href = `/${role}`;
+      window.location.href = data.redirectTo;
     } catch (e) {
-      console.error("Login failed", e);
-      // Fallback
-      document.cookie = `session_role=${role}; path=/; max-age=3600`;
-      window.location.href = `/${role}`;
+      console.error("Quick login error:", e);
     }
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    setLoginError(null);
+    setIsLoading(true);
+
     const emailInput = document.getElementById("email").value.trim().toLowerCase();
     const passwordInput = document.getElementById("password").value;
 
-    let role = "student";
-    if (emailInput.includes("admin")) {
-      role = "admin";
-    } else if (emailInput.includes("instructor")) {
-      role = "instructor";
-    }
-
     try {
-      // Lookup email in the database to get their actual profile
-      const res = await fetch(`/api/users?search=${encodeURIComponent(emailInput)}`);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailInput, password: passwordInput }),
+      });
+
       const data = await res.json();
-      const matchedUser = data.users?.find(u => u.email.toLowerCase() === emailInput);
 
-      if (matchedUser) {
-        // Log in as the exact user matched in database!
-        document.cookie = `session_role=${matchedUser.role}; path=/; max-age=3600`;
-        document.cookie = `session_user_id=${matchedUser.id}; path=/; max-age=3600`;
-        document.cookie = `session_email=${matchedUser.email}; path=/; max-age=3600`;
-        document.cookie = `session_name=${encodeURIComponent(matchedUser.full_name || "PUP User")}; path=/; max-age=3600`;
-        window.location.href = `/${matchedUser.role}`;
-      } else {
-        // Auto-register this as a custom account (developer convenience flow)
-        const nameFormatted = emailInput.split("@")[0].replace(/\./g, " ").replace(/\b\w/g, c => c.toUpperCase());
-        const createRes = await fetch("/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: emailInput,
-            full_name: nameFormatted,
-            role: role,
-            password: passwordInput !== "••••••••" ? passwordInput : null
-          })
-        });
-
-        if (createRes.ok) {
-          const createData = await createRes.json();
-          // Log in as the newly created user
-          document.cookie = `session_role=${role}; path=/; max-age=3600`;
-          document.cookie = `session_user_id=${createData.id}; path=/; max-age=3600`;
-          document.cookie = `session_email=${emailInput}; path=/; max-age=3600`;
-          document.cookie = `session_name=${encodeURIComponent(nameFormatted)}; path=/; max-age=3600`;
-          window.location.href = `/${role}`;
-        } else {
-          await handleQuickLogin(role);
-        }
+      if (!res.ok) {
+        setLoginError(data.error || "Login failed. Please try again.");
+        return;
       }
+
+      window.location.href = data.redirectTo;
     } catch (err) {
-      console.error("Custom DB login error, falling back:", err);
-      await handleQuickLogin(role);
+      console.error("Login error:", err);
+      setLoginError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -160,7 +129,7 @@ export default function Home() {
                     type="email"
                     autoComplete="email"
                     required
-                    defaultValue="instructor@pup.edu.ph"
+
                     className="block w-full appearance-none rounded-xl border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm text-gray-900"
                     placeholder="Enter your email"
                     suppressHydrationWarning
@@ -182,7 +151,7 @@ export default function Home() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
-                    defaultValue="••••••••"
+
                     className="block w-full appearance-none rounded-xl border border-gray-300 pl-4 pr-12 py-3 placeholder-gray-400 shadow-sm transition-all focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/20 sm:text-sm text-gray-900"
                     placeholder="Enter your password"
                     suppressHydrationWarning
@@ -234,13 +203,20 @@ export default function Home() {
                 </div>
               </div>
 
+              {loginError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {loginError}
+                </div>
+              )}
+
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="flex w-full justify-center rounded-xl bg-red-800 py-3 px-4 text-sm font-semibold text-white shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-800 focus:ring-offset-2 transition-all active:scale-[0.98]"
+                  disabled={isLoading}
+                  className="flex w-full justify-center rounded-xl bg-red-800 py-3 px-4 text-sm font-semibold text-white shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-800 focus:ring-offset-2 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                   suppressHydrationWarning
                 >
-                  Sign in
+                  {isLoading ? "Signing in…" : "Sign in"}
                 </button>
               </div>
             </form>

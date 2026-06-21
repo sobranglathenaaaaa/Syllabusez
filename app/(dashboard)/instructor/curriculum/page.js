@@ -8,6 +8,7 @@ import {
   Clock,
   AlertTriangle
 } from "lucide-react";
+import DownloadCurriculumButton from "@/components/curriculum/DownloadCurriculumButton";
 
 export default function InstructorCurriculumPage() {
   const [userProfile, setUserProfile] = useState(null);
@@ -60,8 +61,16 @@ export default function InstructorCurriculumPage() {
 
   function formatDate(dateStr) {
     if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const isoDateStr = dateStr.endsWith("Z") ? dateStr : dateStr + "Z";
+    return new Date(isoDateStr).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila",
+    });
   }
 
   if (loading) {
@@ -90,6 +99,12 @@ export default function InstructorCurriculumPage() {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch sm:items-center">
+          <DownloadCurriculumButton
+            programName={selectedDepartmentObject?.name}
+            programId={selectedDept}
+            fileName={customCurricula[selectedDept]?.file_name}
+            courses={programCourses}
+          />
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Program:</span>
             <select
@@ -129,10 +144,12 @@ export default function InstructorCurriculumPage() {
                 </div>
               </div>
 
-              <DynamicCurriculumView
-                courses={programCourses}
-                emptyMessage="No structured courses found in this curriculum."
-              />
+              <div className="print-curriculum-container">
+                <DynamicCurriculumView
+                  courses={programCourses}
+                  emptyMessage="No structured courses found in this curriculum."
+                />
+              </div>
             </div>
           );
         })()

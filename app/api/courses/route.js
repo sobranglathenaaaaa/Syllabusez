@@ -20,7 +20,7 @@ export async function GET(request) {
     }
     let query = supabase
       .from("courses")
-      .select("id, code, title, units, program_id, prereq, coreq, year_level, semester")
+      .select("id, code, title, units, program_id, prereq, coreq, year_level, semester, lecture_hours, lab_hours")
       .order("code", { ascending: true });
 
     if (effectiveProgramId) {
@@ -39,7 +39,7 @@ export async function GET(request) {
           .eq("course_id", course.id);
         
         if (ciError) {
-          console.error(`Failed to fetch instructors for course ${course.id}:`, ciError);
+          console.error(`Failed to fetch instructors for course ${course.code || course.id}:`, ciError);
           return { ...course, instructors: [] };
         }
 
@@ -49,7 +49,12 @@ export async function GET(request) {
           email: ci.users.email
         })) || [];
 
-        return { ...course, instructors };
+        return { 
+          ...course, 
+          instructors,
+          lectureHours: course.lecture_hours,
+          labHours: course.lab_hours
+        };
       })
     );
 

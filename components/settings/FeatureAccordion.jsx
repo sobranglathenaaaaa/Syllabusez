@@ -1,23 +1,23 @@
 "use client";
 
-import React, { useState } from 'react';
-import { 
-  ChevronDown, 
-  Sparkles, 
-  FileText, 
-  ShieldCheck, 
-  Users, 
-  Zap, 
-  Layout, 
-  Database 
-} from 'lucide-react';
+import { useState } from 'react';
+import {
+  IconChevronDown,
+  IconSparkles,
+  IconFileText,
+  IconShieldCheck,
+  IconUsers,
+  IconBolt,
+  IconLayoutDashboard,
+  IconDatabase
+} from '@tabler/icons-react';
 
 const FEATURES = [
   {
     id: 'syllabus-builder',
     title: 'Outcomes-Based Syllabus Builder',
     description: 'Design comprehensive syllabi with automated mapping between Institutional Learning Outcomes (ILO), Program Learning Outcomes (PLO), and Course Learning Outcomes (CLO). Our dynamic builder ensures academic alignment with polytechnic standards.',
-    icon: Layout,
+    icon: IconLayoutDashboard,
     color: 'text-amber-600',
     bgColor: 'bg-amber-50',
     visual: (
@@ -45,7 +45,7 @@ const FEATURES = [
     id: 'ocr-scanner',
     title: 'Intelligent OCR Integration',
     description: 'Digitize your legacy syllabi in seconds. Using advanced Tesseract-powered character recognition, the portal extracts weekly plans and grading parameters directly from printed documents or screenshots.',
-    icon: Sparkles,
+    icon: IconSparkles,
     color: 'text-[#800000]',
     bgColor: 'bg-red-50',
     visual: (
@@ -53,7 +53,7 @@ const FEATURES = [
         <div className="absolute inset-0 bg-gradient-to-b from-[#800000]/5 to-transparent" />
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-white rounded-xl border border-gray-100 flex items-center justify-center shadow-sm">
-            <Zap className="w-5 h-5 text-[#800000]" />
+            <IconBolt size={20} className="text-[#800000]" />
           </div>
           <div>
             <div className="h-2 w-20 bg-gray-300 rounded-full mb-1" />
@@ -72,14 +72,14 @@ const FEATURES = [
     id: 'secure-materials',
     title: 'Encrypted Material Hosting',
     description: 'Securely upload and manage course materials. Our system uses signed URL technology to ensure that resources are only accessible to authorized students and faculty within specific time windows.',
-    icon: ShieldCheck,
+    icon: IconShieldCheck,
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50',
     visual: (
       <div className="mt-4 grid grid-cols-2 gap-3">
         {[1, 2, 3, 4].map(i => (
           <div key={i} className="p-3 bg-white border border-gray-100 rounded-xl flex items-center gap-2 shadow-sm">
-            <FileText className="w-3.5 h-3.5 text-indigo-500" />
+            <IconFileText size={14} className="text-indigo-500" />
             <div className="h-1.5 w-12 bg-gray-100 rounded-full" />
           </div>
         ))}
@@ -90,7 +90,7 @@ const FEATURES = [
     id: 'approval-workflow',
     title: 'Dynamic Approval Pipeline',
     description: 'Streamline the syllabus review process. Admins and Department Heads can comment, request revisions, and approve syllabi through a centralized dashboard with version history tracking.',
-    icon: Users,
+    icon: IconUsers,
     color: 'text-green-600',
     bgColor: 'bg-green-50',
     visual: (
@@ -125,23 +125,23 @@ export default function FeatureAccordion() {
         {FEATURES.map((feature) => {
           const isOpen = openId === feature.id;
           const Icon = feature.icon;
-
           return (
-            <div 
+            <div
               key={feature.id}
               className={`group overflow-hidden transition-all duration-300 border ${
-                isOpen 
-                  ? 'bg-white border-gray-200 rounded-2xl shadow-sm' 
+                isOpen
+                  ? 'bg-white border-gray-200 rounded-2xl shadow-sm'
                   : 'bg-gray-50/50 border-gray-100 rounded-xl hover:bg-white hover:border-gray-200'
               }`}
             >
               <button
                 onClick={() => setOpenId(isOpen ? null : feature.id)}
+                aria-expanded={isOpen}
                 className="w-full flex items-center justify-between p-4 text-left transition-all"
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-xl ${feature.bgColor} flex items-center justify-center transition-transform group-hover:scale-110`}>
-                    <Icon className={`w-5 h-5 ${feature.color}`} />
+                    <Icon size={20} className={feature.color} />
                   </div>
                   <div>
                     <h4 className={`text-sm font-extrabold transition-colors ${
@@ -156,12 +156,16 @@ export default function FeatureAccordion() {
                     )}
                   </div>
                 </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${
-                  isOpen ? 'rotate-180 text-[#800000]' : ''
-                }`} />
+                <IconChevronDown
+                  size={16}
+                  aria-hidden="true"
+                  className={`text-gray-400 transition-transform duration-300 ${
+                    isOpen ? 'rotate-180 text-[#800000]' : ''
+                  }`}
+                />
               </button>
 
-              <div 
+              <div
                 className={`transition-all duration-500 ease-in-out ${
                   isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
                 }`}
@@ -170,7 +174,6 @@ export default function FeatureAccordion() {
                   <p className="text-xs text-gray-600 leading-relaxed font-medium max-w-lg">
                     {feature.description}
                   </p>
-                  
                   {feature.visual}
                 </div>
               </div>

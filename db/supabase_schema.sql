@@ -29,6 +29,8 @@ CREATE TABLE courses (
   coreq TEXT,
   year_level VARCHAR(255),
   semester VARCHAR(255),
+  lecture_hours INT DEFAULT 0,
+  lab_hours INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

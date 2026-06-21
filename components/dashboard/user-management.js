@@ -302,7 +302,7 @@ export function UserManagement() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-3">
                           <button
-                            onClick={() => setEditingUser({ ...user, password: "" })}
+                            onClick={() => setEditingUser({ ...user, password: "", program: user.program_id || "" })}
                             className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
                           >
                             Edit
@@ -624,6 +624,22 @@ export function UserManagement() {
                   <option value="student">Student</option>
                 </select>
               </div>
+
+              {["student", "instructor"].includes(editingUser.role) && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Program</label>
+                  <select
+                    value={editingUser.program || ""}
+                    onChange={(e) => setEditingUser({ ...editingUser, program: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs font-medium focus:border-red-800 focus:outline-none focus:ring-2 focus:ring-red-800/10 text-gray-800 bg-white"
+                  >
+                    <option value="">No Program Assigned</option>
+                    {programs.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Password</label>

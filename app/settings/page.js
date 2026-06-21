@@ -5,54 +5,64 @@ import SecuritySettings from "@/components/settings/SecuritySettings";
 import About from "@/components/settings/About";
 
 export const metadata = {
-  title: "Settings",
-  description: "User settings and preferences."
+  title: "Settings — Syllabusez",
+  description: "Manage your profile, security, and system preferences.",
 };
 
 export default async function SettingsPage() {
   const cookieStore = await cookies();
-  const role = cookieStore.get("session_role")?.value || "student";
-  const name = decodeURIComponent(cookieStore.get("session_name")?.value || "PUP User");
+  const role  = cookieStore.get("session_role")?.value  || "student";
+  const name  = decodeURIComponent(cookieStore.get("session_name")?.value  || "PUP User");
   const email = cookieStore.get("session_email")?.value || `${role}@pup.edu.ph`;
 
   return (
     <DashboardLayoutShell user={{ role, name, email }}>
-      <div className="space-y-8 p-6 lg:p-8 max-w-7xl mx-auto">
-        <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white p-8 shadow-sm">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#800000]/5 via-transparent to-amber-50/40" />
-          <div className="relative flex flex-col gap-3">
-            <span className="text-[10px] font-black uppercase tracking-[0.35em] text-[#800000]">Account preferences</span>
-            <h1 className="text-3xl font-black text-gray-900">Settings</h1>
-            <p className="max-w-2xl text-sm font-medium leading-relaxed text-gray-500">
+      {/* Accessibility heading */}
+      <h2 className="sr-only">Account settings — profile, security, and system information</h2>
+
+      <div style={{ padding: 28, maxWidth: 1100, margin: "0 auto" }}>
+
+        {/* ── Page header ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+          <div
+            aria-hidden="true"
+            style={{
+              width: 42, height: 42, borderRadius: 12,
+              background: "#800000",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <i className="ti ti-settings" style={{ fontSize: 20, color: "#fff" }} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)", margin: 0 }}>
+              Settings
+            </h1>
+            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "2px 0 0" }}>
               Update your profile, security, and system information from one place.
             </p>
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          <section className="space-y-3">
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-gray-400">Profile</h2>
-              <p className="text-xs font-medium text-gray-500 mt-1">Basic identity and contact details.</p>
-            </div>
-            <ProfileInformation />
+        {/* ── Main grid ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+          {/* Profile */}
+          <section>
+            <ProfileInformation role={role} name={name} email={email} />
           </section>
 
-          <section className="space-y-3">
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-gray-400">Security</h2>
-              <p className="text-xs font-medium text-gray-500 mt-1">Password and authentication settings.</p>
-            </div>
+          {/* Security */}
+          <section>
             <SecuritySettings />
           </section>
 
-          <section className="space-y-3 xl:col-span-2">
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-gray-400">About</h2>
-              <p className="text-xs font-medium text-gray-500 mt-1">System information and policy details.</p>
-            </div>
-            <About />
+          {/* About — full width */}
+          <section style={{ gridColumn: "1 / -1" }}>
+            <About role={role} />
           </section>
+
         </div>
       </div>
     </DashboardLayoutShell>

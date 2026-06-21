@@ -1,119 +1,258 @@
 "use client";
-import React, { useState, useEffect } from "react";
 
-export default function ProfileInformation() {
-  const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    contact: "",
-    studentNumber: "",
-    course: "",
-    theme: "Light"
-  });
-  const [role, setRole] = useState("");
+import { useState, useEffect } from "react";
+import Card, { SectionLabel } from "./ui/Card";
+import { FieldLabel, InputField, ReadOnlyField } from "./ui/FormFields";
+import { Toggle } from "./ui/FormFields";
+import SaveBar from "./ui/SaveBar";
+
+/* ── Avatar initials ── */
+function Avatar({ name }) {
+  const initials = name
+    .split(" ")
+    .map(p => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width: 50, height: 50, borderRadius: "50%",
+        background: "#800000",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <span style={{ color: "#fff", fontSize: 18, fontWeight: 500 }}>{initials}</span>
+    </div>
+  );
+}
+
+/* ── Role badge ── */
+function RoleBadge({ role }) {
+  const label = role === "admin" ? "Admin account"
+    : role === "instructor" ? "Instructor account"
+    : "Student account";
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        fontSize: 10, fontWeight: 500,
+        padding: "1px 8px",
+        borderRadius: 20,
+        background: "rgba(128,0,0,0.08)",
+        color: "#800000",
+        border: "1px solid #e8c5c5",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+export default function ProfileInformation({ role: roleProp, name: nameProp, email: emailProp }) {
+  const role                = roleProp || "student";
   const [userId, setUserId] = useState(null);
 
+  const [form, setForm] = useState({
+    fullName:  nameProp  || "",
+    email:     emailProp || "",
+    contact:   "",
+    studentId: "",   // irreversible once saved
+  });
+
+  // Track whether studentId has been permanently locked (saved once with a value)
+  const [studentIdLocked, setStudentIdLocked] = useState(false);
+
+  // Dark mode toggle — synced to <html class="dark"> and localStorage
+  const [darkMode, setDarkMode] = useState(false);
+
   useEffect(() => {
-    const match = document.cookie.match(/session_role=([^;]+)/);
-    if (match) setRole(decodeURIComponent(match[1]));
+    const saved = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const isDark = saved ? saved === "dark" : prefersDark;
+    setDarkMode(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
 
-    const fetchData = async () => {
+  const toggleDarkMode = (value) => {
+    setDarkMode(value);
+    document.documentElement.classList.toggle("dark", value);
+    localStorage.setItem("theme", value ? "dark" : "light");
+  };
+
+  useEffect(() => {
+    (async () => {
       try {
-        const userRes = await fetch("/api/user");
-        if (!userRes.ok) return;
-        const { user } = await userRes.json();
+        const res = await fetch("/api/user");
+        if (!res.ok) return;
+        const { user } = await res.json();
         setUserId(user?.id || null);
-        setForm(f => ({ ...f, fullName: user?.full_name || "", email: user?.email || "" }));
-
-        const settingsRes = await fetch("/api/user/settings");
-        if (settingsRes.ok) {
-          const settings = await settingsRes.json();
-          setForm(f => ({ ...f, theme: settings?.theme || settings?.preferences?.theme || f.theme }));
-        }
+        setForm(f => ({
+          ...f,
+          fullName: user?.full_name || f.fullName,
+          email:    user?.email     || f.email,
+        }));
       } catch (e) {
         console.error(e);
       }
-    };
-    fetchData();
+    })();
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target;
     setForm(p => ({ ...p, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (userId) {
-        await fetch(`/api/users/${userId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ full_name: form.fullName, email: form.email })
-        });
-      }
-      await fetch("/api/user/settings", {
+  const handleSave = async () => {
+    if (userId) {
+      const res = await fetch(`/api/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          displayName: form.fullName,
-          timeZone: "UTC",
-          language: "en",
-          preferences: { theme: form.theme }
-        })
+        body: JSON.stringify({ full_name: form.fullName, email: form.email }),
       });
-      alert("Profile saved");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save profile");
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Failed to save profile");
+      }
+    }
+    // Lock studentId permanently in this session once saved with a value
+    if (form.studentId && !studentIdLocked) {
+      setStudentIdLocked(true);
     }
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow glassmorphism">
-      <h2 className="text-2xl font-bold mb-2">Profile Information</h2>
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="flex items-center space-x-4">
-          <label className="w-32 font-medium">Full Name</label>
-          <input name="fullName" value={form.fullName} onChange={handleChange} className="border rounded p-1 flex-1" />
+    <Card>
+      {/* Avatar + identity */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+        <Avatar name={form.fullName || "PUP User"} />
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-primary)" }}>
+            {form.fullName || "—"}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 4 }}>
+            {form.email || "—"}
+          </div>
+          <RoleBadge role={role} />
+        </div>
+      </div>
+
+      {/* ── Identity section ── */}
+      <SectionLabel>
+        <i className="ti ti-user" aria-hidden="true" style={{ fontSize: 15, marginRight: 6 }} />
+        Identity
+      </SectionLabel>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+        {/* Full name */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <FieldLabel htmlFor="pf-fullName">Full name</FieldLabel>
+          <InputField
+            id="pf-fullName"
+            name="fullName"
+            value={form.fullName}
+            onChange={handleChange}
+            placeholder="Your full name"
+          />
         </div>
 
-        <div className="flex items-center space-x-4">
-          <label className="w-32 font-medium">Email</label>
-          <input name="email" value={form.email} onChange={handleChange} className="border rounded p-1 flex-1" />
+        {/* Email */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <FieldLabel htmlFor="pf-email">Email address</FieldLabel>
+          <InputField
+            id="pf-email"
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="you@pup.edu.ph"
+          />
         </div>
 
-        <div className="flex items-center space-x-4">
-          <label className="w-32 font-medium">Contact Number</label>
-          <input name="contact" value={form.contact} onChange={handleChange} className="border rounded p-1 flex-1" />
+        {/* Contact */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <FieldLabel htmlFor="pf-contact">Contact number</FieldLabel>
+          <InputField
+            id="pf-contact"
+            name="contact"
+            value={form.contact}
+            onChange={handleChange}
+            placeholder="+63 9XX XXX XXXX"
+          />
         </div>
+      </div>
 
-        {role === "student" && (
-          <>
-            <div className="flex items-center space-x-4">
-              <label className="w-32 font-medium">Student Number</label>
-              <input name="studentNumber" value={form.studentNumber} onChange={handleChange} className="border rounded p-1 flex-1" />
-            </div>
-            <div className="flex items-center space-x-4">
-              <label className="w-32 font-medium">Course</label>
-              <input name="course" value={form.course} onChange={handleChange} className="border rounded p-1 flex-1" />
-            </div>
-          </>
-        )}
+      {/* ── Student-only fields ── */}
+      {role === "student" && (
+        <>
+          <SectionLabel>
+            <i className="ti ti-id-badge" aria-hidden="true" style={{ fontSize: 15, marginRight: 6 }} />
+            Student information
+          </SectionLabel>
 
-        <hr className="my-4" />
-        <div className="flex items-center space-x-4">
-          <label className="w-32 font-medium">Theme</label>
-          <select name="theme" value={form.theme} onChange={handleChange} className="border rounded p-1">
-            <option>Light</option>
-            <option>Dark</option>
-          </select>
+          <div style={{ marginBottom: 16 }}>
+            <FieldLabel htmlFor="pf-studentId">Student ID</FieldLabel>
+
+            {studentIdLocked ? (
+              <ReadOnlyField id="pf-studentId" value={form.studentId} />
+            ) : (
+              <>
+                <InputField
+                  id="pf-studentId"
+                  name="studentId"
+                  value={form.studentId}
+                  onChange={handleChange}
+                  placeholder="e.g. 2021-00001-MN-0"
+                />
+                {form.studentId && (
+                  <p style={{ fontSize: 11, color: "var(--color-text-danger, #b91c1c)", marginTop: 4 }}>
+                    <i className="ti ti-alert-circle" aria-hidden="true" style={{ fontSize: 12, marginRight: 4 }} />
+                    Once saved, this cannot be changed.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Appearance section ── */}
+      <SectionLabel>
+        <i className="ti ti-moon" aria-hidden="true" style={{ fontSize: 15, marginRight: 6 }} />
+        Appearance
+      </SectionLabel>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "10px 12px",
+          borderRadius: "var(--radius-inner)",
+          border: "0.5px solid var(--color-border-tertiary)",
+          background: "var(--color-background-secondary)",
+          marginBottom: 16,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
+            Dark mode
+          </div>
+          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>
+            {darkMode ? "Dark theme is on" : "Light theme is on"}
+          </div>
         </div>
+        <Toggle
+          id="pf-darkmode"
+          checked={darkMode}
+          onChange={toggleDarkMode}
+          label="Toggle dark mode"
+        />
+      </div>
 
-        <div className="flex justify-end">
-          <button type="submit" className="px-4 py-2 bg-[#800000] text-white rounded">Save Changes</button>
-        </div>
-      </form>
-    </div>
+      <SaveBar onSave={handleSave} saveLabel="Save profile" />
+    </Card>
   );
 }

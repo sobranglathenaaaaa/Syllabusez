@@ -6,6 +6,7 @@ import {
   BookOpen,
   AlertTriangle
 } from "lucide-react";
+import DownloadCurriculumButton from "@/components/curriculum/DownloadCurriculumButton";
 
 export default function CurriculumPage() {
   const [departments, setDepartments] = useState([]);
@@ -87,6 +88,12 @@ export default function CurriculumPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch sm:items-center">
+          <DownloadCurriculumButton
+            programName={selectedDept ? departments.find(d => d.id === selectedDept)?.name : ""}
+            programId={selectedDept}
+            fileName={customCurricula[selectedDept]?.file_name}
+            courses={programCourses}
+          />
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Program:</span>
             <select
@@ -124,10 +131,12 @@ export default function CurriculumPage() {
           <span className="text-xs font-semibold">No structured courses found in this curriculum.</span>
         </div>
       ) : (
-        <DynamicCurriculumView
-          courses={programCourses}
-          emptyMessage="No structured courses found in this curriculum."
-        />
+        <div className="print-curriculum-container">
+          <DynamicCurriculumView
+            courses={programCourses}
+            emptyMessage="No structured courses found in this curriculum."
+          />
+        </div>
       )}
     </div>
   );

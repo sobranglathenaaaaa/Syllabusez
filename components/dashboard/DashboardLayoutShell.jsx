@@ -28,13 +28,12 @@ export function DashboardLayoutShell({ user, children }) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   // Dynamic sample notifications based on role
-function getNotifications() {
-  // Sample static notifications; replace with real data fetching as needed
-  return [
-    { id: 1, text: "Welcome to the dashboard!", time: "Just now", read: false },
-    { id: 2, text: "Your profile was updated.", time: "5 mins ago", read: true },
-  ];
-}
+  function getNotifications() {
+    // Sample static notifications; replace with real data fetching as needed
+    return [
+      { id: 1, text: "Welcome to the dashboard!", time: "Just now", read: false },
+    ];
+  }
 
 
   const [notifications, setNotifications] = useState(getNotifications());
@@ -319,14 +318,7 @@ function getNotifications() {
                     <span className="text-[10px] font-semibold text-gray-400 block break-all mt-0.5">{email}</span>
                   </div>
                   <div className="p-1.5 space-y-0.5">
-                    <Link
-                      href="#"
-                      onClick={() => setUserDropdownOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all"
-                    >
-                      <Settings className="w-4 h-4 text-gray-400" />
-                      <span>Account Settings</span>
-                    </Link>
+
                     <button
                       onClick={() => {
                         setUserDropdownOpen(false);

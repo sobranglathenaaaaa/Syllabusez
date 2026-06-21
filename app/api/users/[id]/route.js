@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/db";
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+
+const BCRYPT_ROUNDS = 12;
 
 // DELETE /api/users/[id]
 export async function DELETE(request, { params }) {
@@ -35,7 +38,8 @@ export async function PUT(request, { params }) {
     };
 
     if (password && password.trim().length > 0) {
-      updateData.password = password.trim();
+      // Always re-hash when a new password is explicitly provided
+      updateData.password = await bcrypt.hash(password.trim(), BCRYPT_ROUNDS);
     }
 
     const { error } = await supabase

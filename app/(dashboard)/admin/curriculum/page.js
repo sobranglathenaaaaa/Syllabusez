@@ -16,7 +16,8 @@ import {
   X,
   AlertTriangle
 } from "lucide-react";
-
+import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
+import DownloadCurriculumButton from "@/components/curriculum/DownloadCurriculumButton";
 export default function AdminCurriculumPage() {
   const [programs, setPrograms] = useState([]);
   const [customCurricula, setCustomCurricula] = useState({});
@@ -50,9 +51,7 @@ export default function AdminCurriculumPage() {
       setCustomCurricula(curriculaMap);
 
       const firstUploadedProgram = nextPrograms.find(program => curriculaMap[program.id]);
-      if (!previewProgramId && firstUploadedProgram) {
-        setPreviewProgramId(firstUploadedProgram.id);
-      }
+
 
       const coursesRes = await fetch("/api/courses", { cache: "no-store" });
       const coursesData = await coursesRes.json();
@@ -141,13 +140,28 @@ export default function AdminCurriculumPage() {
     } catch { triggerMessage("error", "Network error."); }
   };
 
-  const handleDelete = async (programId) => {
-    if (!confirm("Delete this custom curriculum? It will revert to the default catalog.")) return;
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [programToDelete, setProgramToDelete] = useState(null);
+
+  const openDeleteModal = (programId) => {
+    setProgramToDelete(programId);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!programToDelete) return;
     try {
-      const res = await fetch(`/api/curriculum?programId=${programId}`, { method: "DELETE" });
+      const res = await fetch(`/api/curriculum?programId=${programToDelete}`, { method: "DELETE" });
       if (res.ok) { triggerMessage("success", "Custom curriculum deleted. Reverted to default."); await fetchMetadata(); }
       else { triggerMessage("error", "Failed to delete custom sheet."); }
     } catch { triggerMessage("error", "Network connection failure."); }
+    setDeleteModalOpen(false);
+    setProgramToDelete(null);
+  };
+
+  const handleDelete = async (programId) => {
+    // Replace previous confirm with modal
+    openDeleteModal(programId);
   };
 
   const handleSaveInstructors = async (courseId, selectedInstructorIds) => {
@@ -172,7 +186,16 @@ export default function AdminCurriculumPage() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
-    return new Date(dateStr).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const isoDateStr = dateStr.endsWith("Z") ? dateStr : dateStr + "Z";
+    return new Date(isoDateStr).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila",
+    });
   };
 
   // Derive which program is being previewed (for catalog display)
@@ -284,6 +307,13 @@ export default function AdminCurriculumPage() {
                         <Eye className="w-3.5 h-3.5" />
                         <span>{isSelected ? "Hide Preview" : "View Curriculum"}</span>
                       </button>
+                      <DownloadCurriculumButton
+                        programName={program.name}
+                        programId={program.id}
+                        fileName={customSheet.file_name}
+                        courses={courses.filter(c => c.program_id === program.id)}
+                        asIcon={true}
+                      />
                       <button
                         onClick={() => handleDelete(program.id)}
                         className="px-3 py-1.5 border border-red-200 hover:bg-red-50 text-red-600 font-extrabold text-[10px] rounded-lg transition-colors flex items-center gap-1"
@@ -345,72 +375,80 @@ export default function AdminCurriculumPage() {
 
             {/* Preview header */}
             <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-50 text-[#800000] rounded-xl"><BookOpen className="w-5 h-5" /></div>
-              <div>
-                <span className="text-[10px] font-bold text-[#800000] uppercase tracking-widest block">{previewProgram.name}</span>
-                <h4 className="font-extrabold text-sm text-gray-900">Dynamic Curriculum</h4>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-50 text-[#800000] rounded-xl"><BookOpen className="w-5 h-5" /></div>
+                <div>
+                  <span className="text-[10px] font-bold text-[#800000] uppercase tracking-widest block">{previewProgram.name}</span>
+                  <h4 className="font-extrabold text-sm text-gray-900">Dynamic Curriculum</h4>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <DownloadCurriculumButton
+                  programName={previewProgram.name}
+                  programId={previewProgram.id}
+                  fileName={customCurricula[previewProgram.id]?.file_name}
+                  courses={courses.filter(c => c.program_id === previewProgram.id)}
+                />
+                <button
+                  onClick={() => setPreviewProgramId(null)}
+                  className="p-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPreviewProgramId(null)}
-                className="p-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
 
-          {/* Content */}
-          <div className="p-6 lg:p-10 space-y-8 overflow-y-auto flex-1">
-            {customCurricula[previewProgram.id] ? (
-              (() => {
-                const sheet = customCurricula[previewProgram.id];
-                const programCourses = courses.filter(c => c.program_id === previewProgram.id);
+            {/* Content */}
+            <div className="p-6 lg:p-10 space-y-8 overflow-y-auto flex-1">
+              {customCurricula[previewProgram.id] ? (
+                (() => {
+                  const sheet = customCurricula[previewProgram.id];
+                  const programCourses = courses.filter(c => c.program_id === previewProgram.id);
 
-                return (
-                  <div className="space-y-6">
-                    <div className="pb-4 border-b border-gray-100">
-                      <h5 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-[#800000]" />
-                        Structured curriculum from {sheet.file_name}
-                      </h5>
-                      <p className="text-[10px] text-gray-400 font-semibold flex items-center gap-1 mt-1">
-                        <Clock className="w-3 h-3" /> Uploaded {formatDate(sheet.uploaded_at)}
-                      </p>
-                      <p className="text-[11px] text-gray-500 mt-2">
-                        This structured view is what instructors and students see. The original upload is kept on the server for processing only.
-                      </p>
+                  return (
+                    <div className="space-y-6">
+                      <div className="pb-4 border-b border-gray-100">
+                        <h5 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-[#800000]" />
+                          Structured curriculum from {sheet.file_name}
+                        </h5>
+                        <p className="text-[10px] text-gray-400 font-semibold flex items-center gap-1 mt-1">
+                          <Clock className="w-3 h-3" /> Uploaded {formatDate(sheet.uploaded_at)}
+                        </p>
+                        <p className="text-[11px] text-gray-500 mt-2">
+                          This structured view is what instructors and students see. The original upload is kept on the server for processing only.
+                        </p>
+                      </div>
+
+                      <div className="print-curriculum-container">
+                        <DynamicCurriculumView
+                          courses={programCourses}
+                          onAssignInstructor={(course) => setAssignModal({ open: true, course })}
+                          emptyMessage="No structured courses yet. Upload a curriculum sheet to generate the dynamic layout."
+                        />
+                      </div>
                     </div>
-
-                    <DynamicCurriculumView
-                      courses={programCourses}
-                      onAssignInstructor={(course) => setAssignModal({ open: true, course })}
-                      emptyMessage="No structured courses yet. Upload a curriculum sheet to generate the dynamic layout."
-                    />
+                  );
+                })()
+              ) : (
+                /* No upload placeholder */
+                <div className="bg-white rounded-3xl border border-gray-200 shadow-md p-8 text-center space-y-6 max-w-xl mx-auto py-12">
+                  <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-100 shadow-inner">
+                    <AlertTriangle className="w-8 h-8" />
                   </div>
-                );
-              })()
-            ) : (
-              /* No upload placeholder */
-              <div className="bg-white rounded-3xl border border-gray-200 shadow-md p-8 text-center space-y-6 max-w-xl mx-auto py-12">
-                <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-100 shadow-inner">
-                  <AlertTriangle className="w-8 h-8" />
+                  <div className="space-y-2">
+                    <h4 className="text-lg font-black text-gray-900 leading-tight">Curriculum Pending Upload</h4>
+                    <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                      No official customized curriculum document has been uploaded for this program yet:
+                    </p>
+                    <span className="inline-block mt-2 px-3 py-1.5 bg-amber-50 text-amber-800 font-black text-xs rounded-xl border border-amber-100">
+                      {previewProgram.name}
+                    </span>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <h4 className="text-lg font-black text-gray-900 leading-tight">Curriculum Pending Upload</h4>
-                  <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                    No official customized curriculum document has been uploaded for this program yet:
-                  </p>
-                  <span className="inline-block mt-2 px-3 py-1.5 bg-amber-50 text-amber-800 font-black text-xs rounded-xl border border-amber-100">
-                    {previewProgram.name}
-                  </span>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
         </div>
       )}
 
@@ -465,6 +503,17 @@ export default function AdminCurriculumPage() {
           </div>
         </div>
       )}
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setProgramToDelete(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Curriculum"
+        message="Are you sure you want to delete this curriculum? This cannot be undone."
+      />
     </div>
   );
 }

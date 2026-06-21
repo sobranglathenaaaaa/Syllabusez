@@ -13,16 +13,17 @@ import path from "path";
 import mammoth from "mammoth";
 
 async function extractTextFromUpload(buffer, safeFileName, filePath) {
-  if (safeFileName.endsWith(".docx")) {
-    const result = await mammoth.extractRawText({ path: filePath });
+  const lowerName = safeFileName.toLowerCase();
+  if (lowerName.endsWith(".docx") || lowerName.endsWith(".doc")) {
+    const result = await mammoth.convertToHtml({ path: filePath });
     return result.value || "";
   }
 
-  if (safeFileName.endsWith(".txt")) {
+  if (lowerName.endsWith(".txt")) {
     return buffer.toString("utf-8");
   }
 
-  if (safeFileName.endsWith(".pdf")) {
+  if (lowerName.endsWith(".pdf")) {
     const pdfParseModule = await import("pdf-parse-new");
     const parse = pdfParseModule.default || pdfParseModule;
     const pdf = await parse(buffer);
@@ -33,7 +34,11 @@ async function extractTextFromUpload(buffer, safeFileName, filePath) {
 }
 
 async function extractCoursesFromText(text, programId) {
+  // Debug: log first 500 chars of extracted text to help diagnose parsing issues
+  console.log("[curriculum] Extracted text preview:", text?.slice(0, 500));
+
   const parsedCourses = parseCoursesFromDocumentText(text);
+  console.log("[curriculum] Parsed courses count:", parsedCourses.length);
 
   if (!parsedCourses.length) {
     console.warn("No curriculum courses could be parsed from the uploaded document.");
@@ -43,12 +48,23 @@ async function extractCoursesFromText(text, programId) {
   await supabase.from("courses").delete().eq("program_id", programId);
 
   let insertedCount = 0;
-  const coursesToInsert = parsedCourses.map((course) => {
+
+
+  const uniqueCoursesMap = new Map();
+  parsedCourses.forEach((course) => {
     const normalized = normalizeParsedCourse(course);
+    if (normalized && normalized.code && !uniqueCoursesMap.has(normalized.code)) {
+      uniqueCoursesMap.set(normalized.code, normalized);
+    }
+  });
+
+  const coursesToInsert = Array.from(uniqueCoursesMap.values()).map((normalized) => {
     return {
       id: crypto.randomUUID(),
       code: normalized.code,
       title: normalized.title,
+      lecture_hours: normalized.lectureHours,
+      lab_hours: normalized.labHours,
       units: normalized.units,
       program_id: programId,
       prereq: normalized.prereq,

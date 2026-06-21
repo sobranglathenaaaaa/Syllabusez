@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/db";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
+
+const BCRYPT_ROUNDS = 12;
 
 // GET /api/users — list all users with optional search/filter
 export async function GET(request) {
@@ -45,6 +48,13 @@ export async function POST(request) {
     }
 
     const id = crypto.randomUUID();
+
+    // Hash the password before storing — never store plaintext
+    let hashedPassword = null;
+    if (password && password.trim().length > 0) {
+      hashedPassword = await bcrypt.hash(password.trim(), BCRYPT_ROUNDS);
+    }
+
     const { error } = await supabase
       .from("users")
       .insert([{
@@ -52,7 +62,7 @@ export async function POST(request) {
         full_name: full_name || null,
         email,
         role,
-        password: password || null,
+        password: hashedPassword,
         program_id: (["student", "instructor"].includes(role) && program) ? program : null
       }]);
 
